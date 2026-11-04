@@ -50,10 +50,13 @@ def main():
     )
     if latest is None:
         raise SystemExit("no latest.json updater feed on the release")
-    feed_text = run(
-        ["gh", "api", f"repos/{repo}/releases/assets/{latest['id']}",
-         "-H", "Accept: application/octet-stream"]
-    )
+    # NOTE: gh's asset JSON exposes `id` as the node id (RA_...), which
+    # the REST asset endpoint rejects with 404 — so download by name
+    # instead of by id.
+    run(["gh", "release", "download", tag, "--pattern", "latest.json",
+         "--dir", "feeddl"])
+    with open("feeddl/latest.json", encoding="utf-8") as f:
+        feed_text = f.read()
     feed = json.loads(feed_text)
     if "windows-x86_64" not in feed.get("platforms", {}):
         raise SystemExit("latest.json has no windows-x86_64 platform")
