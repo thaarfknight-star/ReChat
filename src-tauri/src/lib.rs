@@ -20,16 +20,33 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 
-/// Resolve the frontend dist dir: packaged resource dir first, then
-/// `<repo>/dist` for `tauri dev`.
+/// Resolve the frontend dist dir. 0.3.3: the old code only looked in
+/// `resource_dir()/dist` and then in a cwd-relative `dist/`, but the
+/// installed layout is not guaranteed — the MSI/NSIS resource folder,
+/// the exe folder, and a flattened layout (files at the resource root)
+/// are all seen in the wild, and a GUI app's cwd is unpredictable, so a
+/// single guess 404s the overlays ("overlay file not found") even though
+/// dist IS bundled. Try every plausible home; a candidate counts only
+/// when it holds both overlay pages.
 fn dist_dir(app: &tauri::AppHandle) -> PathBuf {
+    let mut candidates: Vec<PathBuf> = Vec::new();
     if let Ok(res) = app.path().resource_dir() {
-        let bundled = res.join("dist");
-        if bundled.join("chat.html").exists() {
-            return bundled;
+        candidates.push(res.join("dist"));
+        candidates.push(res);
+    }
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("dist"));
+            candidates.push(dir.to_path_buf());
         }
     }
-    PathBuf::from("dist")
+    candidates.push(PathBuf::from("dist"));
+    for c in &candidates {
+        if c.join("chat.html").exists() && c.join("goal.html").exists() {
+            return c.clone();
+        }
+    }
+    candidates.into_iter().next().unwrap_or_else(|| PathBuf::from("dist"))
 }
 
 #[tauri::command]

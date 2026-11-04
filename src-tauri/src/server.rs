@@ -8,8 +8,9 @@
 //!   http://localhost:17874/api/chat/stream -> SSE: live chat events
 //!     (message / deleted / pinned / unpinned / status, JSON per line)
 //!
-//! In dev the dist dir is `<repo>/dist`; in a packaged app it is
-//! `<resource_dir>/dist` (bundled via tauri.conf `resources`).
+//! The dist dir is resolved by `dist_dir` in lib.rs, which tries the
+//! resource dir, the exe dir (nested and flat), and the dev checkout,
+//! because the installed layout is not a single fixed path.
 //! Only loopback is bound, so nothing is exposed to the network.
 
 use std::{net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
@@ -197,7 +198,7 @@ async fn handle(
             let goal = goal_hub.snapshot().await;
             let body = serde_json::json!({
                 "status": "ok",
-                "version": "0.3.2",
+                "version": "0.3.3",
                 "chat": chat,
                 "goal": goal,
             });
@@ -238,8 +239,16 @@ async fn handle(
             }
         }
         p if p.starts_with("/assets/") => {
-            let file = dist.join(p.trim_start_matches('/'));
-            serve(&file).await
+            // 0.3.3: in a flattened install the asset files sit at the
+            // dist root, not under assets/ — try the nested path first,
+            // then the flat one, so both layouts serve.
+            let nested = dist.join(p.trim_start_matches('/'));
+            if nested.exists() {
+                serve(&nested).await
+            } else {
+                let name = p.rsplit('/').next().unwrap_or("");
+                serve(&dist.join(name)).await
+            }
         }
         _ => (
             "404 Not Found",
@@ -261,7 +270,7 @@ async fn serve(file: &PathBuf) -> (&'static str, &'static str, Vec<u8>) {
         Err(_) => (
             "404 Not Found",
             "text/plain",
-            b"overlay file not found (run the frontend build first)".to_vec(),
+            b"overlay file not found (frontend files missing from this install)".to_vec(),
         ),
     }
 }

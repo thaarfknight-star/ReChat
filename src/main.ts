@@ -244,8 +244,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۲",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۲ (پیام‌های دقیق‌تر خطای Goal و ترجمه‌های جاافتاده). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۳",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۳ (پیدا شدن فایل‌های اورلی در هر چیدمان نصب + پیام‌های دقیق‌تر خطای Goal + ترجمه‌های جاافتاده). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -414,8 +414,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.2",
-    aboutTextNew: "Version 0.3.2 (precise Goal error messages + missing translations). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.3",
+    aboutTextNew: "Version 0.3.3 (overlay files found in any install layout + precise Goal errors + missing translations). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
