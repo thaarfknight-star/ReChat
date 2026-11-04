@@ -20,26 +20,35 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 
-/// Resolve the frontend dist dir. 0.3.3: the old code only looked in
-/// `resource_dir()/dist` and then in a cwd-relative `dist/`, but the
-/// installed layout is not guaranteed — the MSI/NSIS resource folder,
-/// the exe folder, and a flattened layout (files at the resource root)
-/// are all seen in the wild, and a GUI app's cwd is unpredictable, so a
-/// single guess 404s the overlays ("overlay file not found") even though
-/// dist IS bundled. Try every plausible home; a candidate counts only
-/// when it holds both overlay pages.
+/// Resolve the frontend dist dir. 0.3.4: the 0.3.3 candidates missed
+/// the REAL installed layout. Tauri's bundler maps a resource path with
+/// `resource_relpath`: every `..` component becomes `_up_`, so the
+/// configured resource `../dist/**/*` lands in the installed app as
+/// `<exe_dir>/_up_/dist/chat.html` (proven from tauri-utils' source and
+/// from the 0.3.0 MSI, whose directory table contains `_up_` + `dist`),
+/// NOT `<exe_dir>/dist/chat.html` — and on Windows `resource_dir()` IS
+/// the exe dir, so the 0.3.3 list was really just two guesses. That is
+/// why 0.3.3 still answered "overlay file not found" on a real install
+/// even though its own server was running. Try the `_up_/dist` layout
+/// FIRST, then every older guess; a candidate counts only when it holds
+/// both overlay pages.
 fn dist_dir(app: &tauri::AppHandle) -> PathBuf {
     let mut candidates: Vec<PathBuf> = Vec::new();
     if let Ok(res) = app.path().resource_dir() {
+        candidates.push(res.join("_up_").join("dist"));
         candidates.push(res.join("dist"));
+        candidates.push(res.join("_up_"));
         candidates.push(res);
     }
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
+            candidates.push(dir.join("_up_").join("dist"));
             candidates.push(dir.join("dist"));
+            candidates.push(dir.join("_up_"));
             candidates.push(dir.to_path_buf());
         }
     }
+    candidates.push(PathBuf::from("_up_").join("dist"));
     candidates.push(PathBuf::from("dist"));
     for c in &candidates {
         if c.join("chat.html").exists() && c.join("goal.html").exists() {
