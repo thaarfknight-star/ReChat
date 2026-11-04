@@ -21,7 +21,8 @@ use tokio::{
 };
 
 use crate::goal::GoalHub;
-use crate::kick::ChatHub;
+use crate::kick::{self, ChatHub};
+use crate::kick_auth::KickAuthState;
 use crate::theme::ThemeStore;
 
 pub const PORT: u16 = 17874;
@@ -107,6 +108,7 @@ async fn handle(
     hub: Arc<ChatHub>,
     goal_hub: Arc<GoalHub>,
     store: Arc<ThemeStore>,
+    auth: Arc<KickAuthState>,
 ) {
     let mut buf = [0u8; 8192];
     let Ok(n) = stream.read(&mut buf).await else { return };
@@ -158,13 +160,44 @@ async fn handle(
         }
     }
 
+    // Kick OAuth callback (M8): validate state, exchange the code,
+    // resolve the channel, persist tokens, connect chat — then tell
+    // the user to go back to the app (the settings window polls).
+    if path == "/oauth/callback" {
+        let code = query_value(&query, "code").unwrap_or_default();
+        let state = query_value(&query, "state").unwrap_or_default();
+        // Await the exchange so the page tells the truth: success
+        // only after tokens are saved and chat is connecting.
+        let ok = match auth.complete(&code, &state).await {
+            Ok((_user, slug)) => {
+                if hub.connect(slug.clone()).await {
+                    kick::spawn_loop(hub.clone(), slug);
+                }
+                true
+            }
+            Err(_e) => false,
+        };
+        let body = if ok {
+            "<!doctype html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\"><title>ReChat</title></head><body style=\"background:#0d1117;color:#e6edf3;font-family:Tahoma,sans-serif;text-align:center;padding-top:80px\"><h1>اتصال انجام شد ✓</h1><p>به برنامه‌ی ReChat برگردید؛ چت خودکار وصل می‌شود.</p><p>Connected — return to ReChat.</p></body></html>"
+        } else {
+            "<!doctype html><html lang=\"fa\" dir=\"rtl\"><head><meta charset=\"utf-8\"><title>ReChat</title></head><body style=\"background:#0d1117;color:#e6edf3;font-family:Tahoma,sans-serif;text-align:center;padding-top:80px\"><h1>اتصال ناموفق بود</h1><p>در ReChat دوباره «اتصال با Kick» را بزنید.</p></body></html>"
+        };
+        let head = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nCache-Control: no-cache\r\nConnection: close\r\n\r\n",
+            body.len()
+        );
+        let _ = stream.write_all(head.as_bytes()).await;
+        let _ = stream.write_all(body.as_bytes()).await;
+        return;
+    }
+
     let (status, ctype, body): (&str, &str, Vec<u8>) = match path.as_str() {
         "/api/status" => {
             let chat = hub.status_snapshot().await;
             let goal = goal_hub.snapshot().await;
             let body = serde_json::json!({
                 "status": "ok",
-                "version": "0.1.0",
+                "version": "0.2.0",
                 "chat": chat,
                 "goal": goal,
             });
@@ -239,6 +272,7 @@ pub async fn run(
     hub: Arc<ChatHub>,
     goal_hub: Arc<GoalHub>,
     store: Arc<ThemeStore>,
+    auth: Arc<KickAuthState>,
 ) {
     let addr = SocketAddr::from(([127, 0, 0, 1], PORT));
     let Ok(listener) = TcpListener::bind(addr).await else {
@@ -252,6 +286,7 @@ pub async fn run(
         let hub = hub.clone();
         let goal_hub = goal_hub.clone();
         let store = store.clone();
-        tokio::spawn(handle(stream, dist, hub, goal_hub, store));
+        let auth = auth.clone();
+        tokio::spawn(handle(stream, dist, hub, goal_hub, store, auth));
     }
 }

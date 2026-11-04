@@ -6,6 +6,11 @@ const params = new URLSearchParams(location.search);
 const demo = params.get("demo") === "1";
 const profile = params.get("profile");
 if (profile) document.body.dataset.profile = profile;
+// Overlay language comes from the ?lang= param the settings window
+// appends to the overlay link (M8 bilingual overlays).
+const overlayLang = params.get("lang") === "en" ? "en" : "fa";
+document.documentElement.lang = overlayLang;
+document.documentElement.dir = overlayLang === "fa" ? "rtl" : "ltr";
 
 const titleEl = document.querySelector("#goal .title") as HTMLDivElement;
 const currentEl = document.getElementById("current") as HTMLSpanElement;
@@ -15,7 +20,13 @@ const pctEl = document.getElementById("pct") as HTMLSpanElement;
 const fill = document.getElementById("fill") as HTMLDivElement;
 const errorEl = document.getElementById("goalError") as HTMLDivElement;
 
-const fmt = new Intl.NumberFormat("fa-IR");
+const fmt = new Intl.NumberFormat(overlayLang === "fa" ? "fa-IR" : "en-US");
+// The server's unit labels are Persian (its Donofa map); translate the
+// known ones for the English overlay instead of changing the API.
+const unitMap: Record<string, string> = { "تومان": "Toman", "دلار": "USD", "یورو": "EUR" };
+function unitLabel(label: string): string {
+  return overlayLang === "en" ? (unitMap[label] ?? label) : label;
+}
 
 type GoalStatus = {
   state: string;
@@ -35,17 +46,20 @@ function render(s: GoalStatus): void {
     titleEl.textContent = g.title;
     currentEl.textContent = fmt.format(Math.round(g.current));
     targetEl.textContent = fmt.format(Math.round(g.total));
-    unitEl.textContent = g.unit_label;
-    pctEl.textContent = `${fmt.format(Math.round(g.pct))}٪`;
+    unitEl.textContent = unitLabel(g.unit_label);
+    pctEl.textContent = `${fmt.format(Math.round(g.pct))}${overlayLang === "fa" ? "٪" : "%"}`;
     fill.style.width = `${g.pct}%`;
   }
   if (s.state === "error") {
     errorEl.textContent = s.detail
-      ? `خطا در به‌روزرسانی Goal: ${s.detail}`
-      : "خطا در به‌روزرسانی Goal";
+      ? overlayLang === "fa" ? `خطا در به‌روزرسانی Goal: ${s.detail}` : `Goal update error: ${s.detail}`
+      : overlayLang === "fa" ? "خطا در به‌روزرسانی Goal" : "Goal update error";
   } else if (s.state === "idle" || s.state === "loading") {
     if (!s.goal) {
-      titleEl.textContent = s.state === "loading" ? "در حال خواندن Goal…" : "Goal تنظیم نشده است";
+      titleEl.textContent =
+        s.state === "loading"
+          ? overlayLang === "fa" ? "در حال خواندن Goal…" : "Reading goal…"
+          : overlayLang === "fa" ? "Goal تنظیم نشده است" : "Goal not set";
     }
     errorEl.textContent = "";
   } else {
@@ -56,7 +70,7 @@ function render(s: GoalStatus): void {
 if (demo) {
   render({
     state: "live",
-    goal: { title: "هدف فالوور", unit_label: "", current: 145, total: 300, pct: 48 },
+    goal: { title: overlayLang === "fa" ? "هدف فالوور" : "Follower goal", unit_label: "", current: 145, total: 300, pct: 48 },
   });
 } else {
   async function refresh(): Promise<void> {
@@ -66,7 +80,7 @@ if (demo) {
       const r = await fetch("/api/goal");
       render((await r.json()) as GoalStatus);
     } catch {
-      errorEl.textContent = "ارتباط با سرور محلی قطع شد";
+      errorEl.textContent = overlayLang === "fa" ? "ارتباط با سرور محلی قطع شد" : "Local server connection lost";
     }
   }
   let timer = setInterval(() => void refresh(), 5000);

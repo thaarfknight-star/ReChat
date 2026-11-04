@@ -38,17 +38,35 @@ function renderContent(content: string): string {
   );
 }
 
-const badgeLabel: Record<string, string> = {
-  broadcaster: "پخش‌کننده",
-  moderator: "مدیر",
-  vip: "VIP",
-  subscriber: "ساب",
-  founder: "بنیان‌گذار",
-  og: "OG",
-  staff: "کارمند",
-  verified: "تأییدشده",
-  sub_gifter: "هدیه‌دهنده",
-};
+// Overlay language comes from the ?lang= param the settings window
+// appends to the overlay link (M8 bilingual overlays).
+const overlayLang = new URLSearchParams(location.search).get("lang") === "en" ? "en" : "fa";
+document.documentElement.lang = overlayLang;
+document.documentElement.dir = overlayLang === "fa" ? "rtl" : "ltr";
+
+const badgeLabel: Record<string, string> = overlayLang === "fa"
+  ? {
+      broadcaster: "پخش‌کننده",
+      moderator: "مدیر",
+      vip: "VIP",
+      subscriber: "ساب",
+      founder: "بنیان‌گذار",
+      og: "OG",
+      staff: "کارمند",
+      verified: "تأییدشده",
+      sub_gifter: "هدیه‌دهنده",
+    }
+  : {
+      broadcaster: "Broadcaster",
+      moderator: "Mod",
+      vip: "VIP",
+      subscriber: "Sub",
+      founder: "Founder",
+      og: "OG",
+      staff: "Staff",
+      verified: "Verified",
+      sub_gifter: "Gifter",
+    };
 
 function badgeHtml(b: Badge): string {
   if (b.image) {
@@ -93,20 +111,29 @@ function pin(m: Msg): void {
   while (pinnedBox.children.length > 5) pinnedBox.firstChild?.remove();
 }
 
-const statusText: Record<string, string> = {
-  idle: "وصل نیست",
-  resolving: "در حال پیدا کردن کانال…",
-  connecting: "در حال اتصال…",
-  connected: "متصل",
-  reconnecting: "اتصال دوباره…",
-  error: "خطا در اتصال",
-};
+const statusText: Record<string, string> = overlayLang === "fa"
+  ? {
+      idle: "وصل نیست",
+      resolving: "در حال پیدا کردن کانال…",
+      connecting: "در حال اتصال…",
+      connected: "متصل",
+      reconnecting: "اتصال دوباره…",
+      error: "خطا در اتصال",
+    }
+  : {
+      idle: "Not connected",
+      resolving: "Resolving channel…",
+      connecting: "Connecting…",
+      connected: "Connected",
+      reconnecting: "Reconnecting…",
+      error: "Connection error",
+    };
 
 if (demo) {
   const samples: Array<{ user: string; color: string; badge?: string; text: string }> = [
-    { user: "tahaa", color: "#4ade80", badge: "مدیر", text: "سلام به همه! بازی امشب سولزلایک است" },
+    { user: "tahaa", color: "#4ade80", badge: overlayLang === "fa" ? "مدیر" : "Mod", text: overlayLang === "fa" ? "سلام به همه! بازی امشب سولزلایک است" : "Hey everyone! Tonight we play a soulslike" },
     { user: "soul_fan", color: "#58a6ff", text: "this boss fight is insane 🔥" },
-    { user: "nightowl", color: "#f472b6", badge: "VIP", text: "چت فارسی و انگلیسی قاطی هم خوب درمیاد، great stream!" },
+    { user: "nightowl", color: "#f472b6", badge: "VIP", text: overlayLang === "fa" ? "چت فارسی و انگلیسی قاطی هم خوب درمیاد، great stream!" : "Persian and English chat mix nicely, great stream!" },
   ];
   box.innerHTML = "";
   for (const s of samples) {
@@ -121,9 +148,9 @@ if (demo) {
       }),
     );
   }
-  statusEl.textContent = "حالت نمایشی (demo)";
+  statusEl.textContent = overlayLang === "fa" ? "حالت نمایشی (demo)" : "Demo mode";
 } else {
-  box.innerHTML = `<div class="msg" dir="rtl">در انتظار پیام زنده…</div>`;
+  box.innerHTML = `<div class="msg" dir="rtl">${overlayLang === "fa" ? "در انتظار پیام زنده…" : "Waiting for live messages…"}</div>`;
   const es = new EventSource("/api/chat/stream");
   es.onmessage = (e) => {
     try {
@@ -152,7 +179,8 @@ if (demo) {
     }
   };
   es.onerror = () => {
-    statusEl.textContent = "ارتباط با سرور محلی قطع شد، تلاش دوباره…";
+    statusEl.textContent =
+      overlayLang === "fa" ? "ارتباط با سرور محلی قطع شد، تلاش دوباره…" : "Local server connection lost, retrying…";
   };
 }
 

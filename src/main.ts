@@ -1,4 +1,6 @@
-// ReChat settings UI (M2: live chat connect + filters via Tauri commands.
+// ReChat settings UI (M2: live chat connect + filters via Tauri commands;
+// M8: nav pages, fixed dual preview, accordion customization, presets,
+// Kick OAuth auto-connect, separate app-settings page.
 // Outside Tauri (plain browser dev) the buttons degrade to local save.)
 
 import { invoke } from "@tauri-apps/api/core";
@@ -11,8 +13,26 @@ type ChatState = "idle" | "resolving" | "connecting" | "connected" | "reconnecti
 const dict: Record<Lang, Record<string, string>> = {
   fa: {
     tagline: "چت و Goal کیک، برای Meld Studio",
+    navConnect: "اتصال",
+    navCustomize: "شخصی‌سازی",
+    navGuide: "راهنمای Meld",
+    navSettings: "تنظیمات برنامه",
+    kickAutoTitle: "اتصال خودکار با Kick",
+    kickAutoNote: "با حساب کیک خودت وارد شو تا ReChat خودش کانالت را پیدا کند و چت را وصل کند؛ دیگر لازم نیست لینک کانال بدهی.",
+    kickClientIdLabel: "Client ID برنامه‌ی Kick",
+    kickSecretLabel: "Client Secret برنامه‌ی Kick",
+    kickSave: "ذخیره",
+    kickGuideSummary: "راهنمای ساخت برنامه‌ی Kick",
+    kickGuideText: "در kick.com وارد شو، به Settings → Developer برو و یک برنامه بساز؛ Redirect URI را دقیقاً http://localhost:17874/oauth/callback بگذار و اسکوپ‌های user:read و channel:read را بده. بعد Client ID و Client Secret را اینجا ذخیره کن و «اتصال با Kick» را بزن؛ مرورگر باز می‌شود، دسترسی را تأیید می‌کنی و چت خودکار وصل می‌شود. این دو مقدار فقط روی همین سیستم می‌ماند.",
+    kickConnect: "اتصال با Kick",
+    kickDisconnect: "قطع اتصال Kick",
+    kickNotConnected: "وصل نیست",
+    kickConnected: "متصل به Kick",
+    kickWaiting: "در مرورگر دسترسی را تأیید کن…",
+    kickNeedConfig: "اول Client ID و Client Secret را ذخیره کن.",
+    kickFailed: "اتصال Kick ناموفق بود",
     chatTitle: "چت کیک",
-    channelLabel: "نام کانال یا لینک کانال",
+    channelLabel: "نام کانال یا لینک کانال (روش دستی، وقتی اتصال خودکار تنظیم نشده)",
     connect: "اتصال",
     disconnect: "قطع اتصال",
     chatOffline: "وصل نیست",
@@ -34,13 +54,19 @@ const dict: Record<Lang, Record<string, string>> = {
     importJson: "ورودی JSON",
     copyChatProfile: "کپی لینک چت این پروفایل",
     copyGoalProfile: "کپی لینک Goal این پروفایل",
+    accChat: "چت",
+    accGoal: "Goal",
+    accPresets: "تم‌های آماده",
+    accCss: "CSS سفارشی",
+    presetNote: "با زدن هر تم، رنگ‌ها و CSS سفارشی همین پروفایل جایگزین می‌شود؛ پیش‌نمایش سمت راست همان لحظه عوض می‌شود.",
     cssSample: "CSS نمونه",
     cssDocs: "راهنمای کلاس‌ها",
-    prevChat: "چت",
-    prevGoal: "Goal",
+    prevChatLabel: "پیش‌نمایش چت",
+    prevGoalLabel: "پیش‌نمایش Goal",
+    previewNote: "پیش‌نمایش‌ها همیشه همین‌جا می‌مانند و با هر تغییری در شخصی‌سازی همان لحظه تازه می‌شوند.",
     meldGuideTitle: "راهنمای Meld Studio",
     meldGuideIntro: "پس‌زمینه‌ی اورلی‌ها کاملاً شفاف است؛ نیازی به Chroma Key نیست. مصرف هم سبک است: چت فقط با رویداد زنده می‌آید و سقف پیام دارد، و Goal هر ۱۰ ثانیه یک‌بار خوانده می‌شود.",
-    meldStep1: "ReChat را اجرا کن؛ در بخش چت نام کانال را بزن و «اتصال» را بزن تا وضعیت «متصل ✓» شود.",
+    meldStep1: "ReChat را اجرا کن؛ با «اتصال با Kick» وارد شو (یا در بخش چت نام کانال را بزن و «اتصال» را بزن) تا وضعیت «متصل ✓» شود.",
     meldStep2: "لینک Goal را در بخش Goal بزن و «ذخیره» را بزن تا وضعیت Goal هم «متصل ✓» شود.",
     meldStep3: "در Meld، در پنل Layers روی + بزن و Browser را انتخاب کن — یا لینک را مستقیم روی بوم با Ctrl+V بچسبان تا لایه‌ی Browser خودش ساخته شود.",
     meldStep4: "لینک اورلی را از ReChat کپی کن (بخش لینک‌های اورلی، یا لینک همان پروفایل) و در قسمت URL پنل Inspector بچسبان.",
@@ -59,9 +85,13 @@ const dict: Record<Lang, Record<string, string>> = {
     goalError: "خطا در Goal",
     overlayTitle: "لینک‌های اورلی (سرور محلی)",
     copyLink: "کپی لینک",
-    overlayNote: "این لینک‌ها را در Meld به‌عنوان Browser Source اضافه کنید (راهنمای قدم‌به‌قدم در M5 داخل برنامه می‌آید).",
+    overlayNote: "این لینک‌ها را در Meld به‌عنوان Browser Source اضافه کنید.",
+    settingsTitle: "تنظیمات برنامه",
+    langLabel: "زبان برنامه",
+    autoUpdateLabel: "بررسی خودکار به‌روزرسانی هنگام اجرای برنامه",
+    versionNote: "نسخه‌ی ۰٫۲٫۰",
     aboutTitle: "درباره‌ی ReChat",
-    aboutText: "نسخه‌ی ۰٫۱٫۰ (M5 — چت و Goal زنده + شخصی‌سازی + راهنمای Meld). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. بدون لاگین؛ تنظیمات فقط روی همین سیستم می‌ماند.",
+    aboutText: "نسخه‌ی ۰٫۲٫۰ (M8 — چیدمان تازه + اتصال خودکار Kick + برند نصب‌کننده). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
     aboutLicense: "لایسنس: دوگانه‌ی MIT/Apache-2.0 — © 2026 Taha Arefi. متن کامل لایسنس‌ها همراه نصب‌کننده است.",
     updateBtn: "بررسی به‌روزرسانی",
     updateChecking: "در حال بررسی…",
@@ -77,8 +107,26 @@ const dict: Record<Lang, Record<string, string>> = {
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
+    navConnect: "Connect",
+    navCustomize: "Customize",
+    navGuide: "Meld guide",
+    navSettings: "App settings",
+    kickAutoTitle: "Auto-connect with Kick",
+    kickAutoNote: "Sign in with your Kick account and ReChat finds your channel and connects chat itself — no channel link needed.",
+    kickClientIdLabel: "Kick app Client ID",
+    kickSecretLabel: "Kick app Client Secret",
+    kickSave: "Save",
+    kickGuideSummary: "How to create a Kick app",
+    kickGuideText: "Sign in at kick.com, go to Settings → Developer and create an app; set the Redirect URI to exactly http://localhost:17874/oauth/callback and grant the user:read and channel:read scopes. Then save the Client ID and Client Secret here and hit “Connect with Kick”; the browser opens, you approve access, and chat connects automatically. Both values stay on this machine only.",
+    kickConnect: "Connect with Kick",
+    kickDisconnect: "Disconnect Kick",
+    kickNotConnected: "Not connected",
+    kickConnected: "Connected to Kick",
+    kickWaiting: "Approve access in the browser…",
+    kickNeedConfig: "Save the Client ID and Client Secret first.",
+    kickFailed: "Kick connection failed",
     chatTitle: "Kick chat",
-    channelLabel: "Channel name or channel URL",
+    channelLabel: "Channel name or channel URL (manual method, when auto-connect is not set up)",
     connect: "Connect",
     disconnect: "Disconnect",
     chatOffline: "Not connected",
@@ -100,13 +148,19 @@ const dict: Record<Lang, Record<string, string>> = {
     importJson: "Import JSON",
     copyChatProfile: "Copy this profile's chat link",
     copyGoalProfile: "Copy this profile's goal link",
+    accChat: "Chat",
+    accGoal: "Goal",
+    accPresets: "Ready themes",
+    accCss: "Custom CSS",
+    presetNote: "Applying a theme replaces this profile's colors and custom CSS; the preview on the right updates instantly.",
     cssSample: "Sample CSS",
     cssDocs: "Class guide",
-    prevChat: "Chat",
-    prevGoal: "Goal",
+    prevChatLabel: "Chat preview",
+    prevGoalLabel: "Goal preview",
+    previewNote: "The previews stay here and refresh instantly with every customization change.",
     meldGuideTitle: "Meld Studio guide",
     meldGuideIntro: "Overlay backgrounds are fully transparent; no Chroma Key needed. Footprint is light: chat arrives on live events only with a message cap, and the goal is read once every 10 seconds.",
-    meldStep1: "Run ReChat; in the chat section enter the channel name and hit Connect until the status shows Connected ✓.",
+    meldStep1: "Run ReChat; sign in with “Connect with Kick” (or enter the channel name in the chat section and hit Connect) until the status shows Connected ✓.",
     meldStep2: "Paste the Goal link in the Goal section and hit Save until the goal status shows Connected ✓.",
     meldStep3: "In Meld, click + in the Layers panel and choose Browser — or paste the link straight onto the canvas with Ctrl+V to create a Browser layer automatically.",
     meldStep4: "Copy the overlay link from ReChat (the overlay links section, or that profile's link) and paste it into the URL field in the Inspector panel.",
@@ -125,9 +179,13 @@ const dict: Record<Lang, Record<string, string>> = {
     goalError: "Goal error",
     overlayTitle: "Overlay links (local server)",
     copyLink: "Copy link",
-    overlayNote: "Add these links in Meld as a Browser Source (a step-by-step guide arrives in-app in M5).",
+    overlayNote: "Add these links in Meld as a Browser Source.",
+    settingsTitle: "App settings",
+    langLabel: "App language",
+    autoUpdateLabel: "Check for updates automatically on startup",
+    versionNote: "Version 0.2.0",
     aboutTitle: "About ReChat",
-    aboutText: "Version 0.1.0 (M5 — live chat and goal + customization + Meld guide). Takes Kick chat and Goal and hands them to Meld as transparent overlays. No login; settings stay on this machine.",
+    aboutText: "Version 0.2.0 (M8 — new layout + Kick auto-connect + installer branding). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
     aboutLicense: "License: dual MIT/Apache-2.0 — © 2026 Taha Arefi. Full license texts ship with the installer.",
     updateBtn: "Check for updates",
     updateChecking: "Checking…",
@@ -159,6 +217,7 @@ const hideCmdChk = $<HTMLInputElement>("hideCmdChk");
 const usersTa = $<HTMLTextAreaElement>("usersTa");
 const botsTa = $<HTMLTextAreaElement>("botsTa");
 const wordsTa = $<HTMLTextAreaElement>("wordsTa");
+const shell = $("shell");
 
 let lang: Lang = (localStorage.getItem("rechat-lang") as Lang) || "fa";
 channelInput.value = localStorage.getItem("rechat-channel") ?? "";
@@ -230,15 +289,37 @@ function statusText(state: string, channel?: string, detail?: string): string {
 
 function renderStatus(state: string, channel?: string, detail?: string): void {
   chatStatus.textContent = statusText(state, channel, detail);
-  chatStatus.style.background =
-    state === "connected" ? "#16a34a" : state === "error" ? "#dc2626" : "";
+  chatStatus.classList.toggle("ok", state === "connected");
+  chatStatus.style.background = state === "connected" ? "#16a34a" : state === "error" ? "#dc2626" : "";
+}
+
+const chatUrl = $<HTMLInputElement>("chatUrl");
+const goalUrl = $<HTMLInputElement>("goalUrl");
+
+function refreshOverlayUrls(): void {
+  chatUrl.value = `${base}/chat?lang=${lang}`;
+  goalUrl.value = `${base}/goal?lang=${lang}`;
 }
 
 function applyLang(): void {
   const t = dict[lang];
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "fa" ? "rtl" : "ltr";
+  shell.classList.toggle("ltr", lang === "en");
   ($("tagline").textContent = t.tagline);
+  ($("navConnect").textContent = t.navConnect);
+  ($("navCustomize").textContent = t.navCustomize);
+  ($("navGuide").textContent = t.navGuide);
+  ($("navSettings").textContent = t.navSettings);
+  ($("kickAutoTitle").textContent = t.kickAutoTitle);
+  ($("kickAutoNote").textContent = t.kickAutoNote);
+  ($("kickClientIdLabel").textContent = t.kickClientIdLabel);
+  ($("kickSecretLabel").textContent = t.kickSecretLabel);
+  ($("kickSaveBtn").textContent = t.kickSave);
+  ($("kickGuideSummary").textContent = t.kickGuideSummary);
+  ($("kickGuideText").textContent = t.kickGuideText);
+  ($("kickConnectBtn").textContent = t.kickConnect);
+  ($("kickDisconnectBtn").textContent = t.kickDisconnect);
   ($("chatTitle").textContent = t.chatTitle);
   ($("channelLabel").textContent = t.channelLabel);
   ($("connectBtn").textContent = t.connect);
@@ -261,10 +342,16 @@ function applyLang(): void {
   ($("importBtn").textContent = t.importJson);
   ($("copyChatProfileBtn").textContent = t.copyChatProfile);
   ($("copyGoalProfileBtn").textContent = t.copyGoalProfile);
+  ($("accChatLabel").textContent = t.accChat);
+  ($("accGoalLabel").textContent = t.accGoal);
+  ($("accPresetsLabel").textContent = t.accPresets);
+  ($("accCssLabel").textContent = t.accCss);
+  ($("presetNote").textContent = t.presetNote);
   ($("cssSampleBtn").textContent = t.cssSample);
   ($("cssDocsBtn").textContent = t.cssDocs);
-  ($("prevChatBtn").textContent = t.prevChat);
-  ($("prevGoalBtn").textContent = t.prevGoal);
+  ($("prevChatLabel").textContent = t.prevChatLabel);
+  ($("prevGoalLabel").textContent = t.prevGoalLabel);
+  ($("previewNote").textContent = t.previewNote);
   ($("meldGuideTitle").textContent = t.meldGuideTitle);
   ($("meldGuideIntro").textContent = t.meldGuideIntro);
   for (let i = 1; i <= 8; i++) {
@@ -280,23 +367,67 @@ function applyLang(): void {
   ($("copyChatBtn").textContent = t.copyLink);
   ($("copyGoalBtn").textContent = t.copyLink);
   ($("overlayNote").textContent = t.overlayNote);
+  ($("settingsTitle").textContent = t.settingsTitle);
+  ($("langLabel").textContent = t.langLabel);
+  ($("autoUpdateLabel").textContent = t.autoUpdateLabel);
+  ($("versionNote").textContent = t.versionNote);
   ($("aboutTitle").textContent = t.aboutTitle);
   ($("aboutText").textContent = t.aboutText);
   ($("aboutLicense").textContent = t.aboutLicense);
   ($("updateBtn").textContent = t.updateBtn);
+  channelInput.placeholder = lang === "fa" ? "kick.com/tahaa" : "kick.com/username";
+  goalInput.placeholder = "https://…";
+  ($("newProfileName") as HTMLInputElement).placeholder =
+    lang === "fa" ? "نام پروفایل تازه" : "New profile name";
+  ($("ioTa") as HTMLTextAreaElement).placeholder =
+    lang === "fa" ? "JSON پروفایل‌ها برای ورودی/خروجی" : "Profiles JSON for import/export";
+  ($("kickClientId") as HTMLInputElement).placeholder = lang === "fa" ? "مثال: 01K…" : "e.g. 01K…";
+  ($("kickSecret") as HTMLInputElement).placeholder =
+    lang === "fa" ? "خالی بماند یعنی قبلی حفظ شود" : "Leave empty to keep the saved one";
   langBtn.textContent = lang === "fa" ? "English" : "فارسی";
+  renderPresetNames();
+  refreshOverlayUrls();
 }
 
-langBtn.addEventListener("click", () => {
-  lang = lang === "fa" ? "en" : "fa";
+function setLang(next: Lang): void {
+  lang = next;
   localStorage.setItem("rechat-lang", lang);
   applyLang();
-});
+  void refreshKickUi();
+}
 
+langBtn.addEventListener("click", () => setLang(lang === "fa" ? "en" : "fa"));
+$("langFaBtn").addEventListener("click", () => setLang("fa"));
+$("langEnBtn").addEventListener("click", () => setLang("en"));
+
+// ---------- Nav pages ----------
+for (const btn of document.querySelectorAll<HTMLButtonElement>("#mainNav button")) {
+  btn.addEventListener("click", () => {
+    for (const b of document.querySelectorAll<HTMLButtonElement>("#mainNav button")) {
+      b.classList.toggle("active", b === btn);
+    }
+    for (const page of document.querySelectorAll<HTMLElement>(".page")) {
+      page.hidden = page.id !== `page-${btn.dataset.page}`;
+    }
+  });
+}
+
+// ---------- Accordion ----------
+for (const head of document.querySelectorAll<HTMLButtonElement>(".acc-head")) {
+  head.addEventListener("click", () => {
+    const section = head.closest(".acc") as HTMLElement;
+    const body = document.getElementById(head.dataset.acc as string) as HTMLElement;
+    const open = section.classList.toggle("open");
+    body.hidden = !open;
+  });
+}
+
+// ---------- Manual chat connect (fallback) ----------
 $("connectBtn").addEventListener("click", () => {
   const channel = channelInput.value.trim();
   localStorage.setItem("rechat-channel", channel);
   if (!channel) return;
+  localStorage.setItem("rechat-auto-chat", "1");
   if (isTauri) {
     void invoke("connect_chat", { channel }).catch(() => {
       renderStatus("error", channel, "فراخوانی ناموفق بود");
@@ -308,9 +439,11 @@ $("connectBtn").addEventListener("click", () => {
   }
 });
 $("disconnectBtn").addEventListener("click", () => {
+  localStorage.removeItem("rechat-auto-chat");
   if (isTauri) void invoke("disconnect_chat").catch(() => undefined);
   renderStatus("idle");
 });
+
 function renderGoalStatus(state: string, detail?: string): void {
   const t = dict[lang];
   let s: string;
@@ -365,11 +498,6 @@ for (const el of [hideCmdChk, usersTa, botsTa, wordsTa]) {
   el.addEventListener("change", scheduleFilterSave);
 }
 
-const chatUrl = $<HTMLInputElement>("chatUrl");
-const goalUrl = $<HTMLInputElement>("goalUrl");
-chatUrl.value = `${base}/chat`;
-goalUrl.value = `${base}/goal`;
-
 async function copy(input: HTMLInputElement, btn: HTMLButtonElement): Promise<void> {
   try {
     await navigator.clipboard.writeText(input.value);
@@ -384,7 +512,99 @@ async function copy(input: HTMLInputElement, btn: HTMLButtonElement): Promise<vo
 $("copyChatBtn").addEventListener("click", (e) => void copy(chatUrl, e.currentTarget as HTMLButtonElement));
 $("copyGoalBtn").addEventListener("click", (e) => void copy(goalUrl, e.currentTarget as HTMLButtonElement));
 
-applyLang();
+// ---------- Kick OAuth auto-connect ----------
+type KickOauthState = {
+  client_id: string;
+  has_secret: boolean;
+  connected: boolean;
+  username?: string;
+  slug?: string;
+};
+
+const kickStatus = $("kickStatus");
+const kickClientId = $<HTMLInputElement>("kickClientId");
+const kickSecret = $<HTMLInputElement>("kickSecret");
+const kickSavedNote = $("kickSavedNote");
+
+function renderKick(s: KickOauthState): void {
+  const t = dict[lang];
+  kickClientId.value = s.client_id;
+  if (s.connected) {
+    kickStatus.textContent = `${t.kickConnected} (${s.username ?? s.slug ?? ""})`;
+    kickStatus.classList.add("ok");
+    kickStatus.style.background = "#16a34a";
+  } else {
+    kickStatus.textContent = t.kickNotConnected;
+    kickStatus.classList.remove("ok");
+    kickStatus.style.background = "";
+  }
+}
+
+async function refreshKickUi(): Promise<KickOauthState | null> {
+  if (!isTauri) return null;
+  try {
+    const s = await invoke<KickOauthState>("get_kick_oauth_config");
+    renderKick(s);
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+$("kickSaveBtn").addEventListener("click", () => {
+  if (!isTauri) {
+    kickSavedNote.textContent = dict[lang].saved;
+    return;
+  }
+  void invoke("save_kick_oauth_config", {
+    clientId: kickClientId.value.trim(),
+    clientSecret: kickSecret.value,
+  })
+    .then(() => {
+      kickSecret.value = "";
+      kickSavedNote.textContent = dict[lang].saved;
+      return refreshKickUi();
+    })
+    .catch(() => undefined);
+});
+
+let kickPollTimer: ReturnType<typeof setInterval> | undefined;
+$("kickConnectBtn").addEventListener("click", () => {
+  if (!isTauri) return;
+  void invoke("start_kick_oauth")
+    .then(() => {
+      kickStatus.textContent = dict[lang].kickWaiting;
+      let tries = 0;
+      clearInterval(kickPollTimer);
+      kickPollTimer = setInterval(() => {
+        tries += 1;
+        void refreshKickUi().then((s) => {
+          if (s?.connected || tries >= 60) {
+            clearInterval(kickPollTimer);
+            if (s?.connected) {
+              void invoke("chat_status")
+                .then((st) => {
+                  const c = st as { state: string; channel?: string; detail?: string };
+                  renderStatus(c.state, c.channel, c.detail);
+                })
+                .catch(() => undefined);
+            }
+          }
+        });
+      }, 2000);
+    })
+    .catch(() => {
+      kickStatus.textContent = dict[lang].kickNeedConfig;
+    });
+});
+$("kickDisconnectBtn").addEventListener("click", () => {
+  if (!isTauri) return;
+  clearInterval(kickPollTimer);
+  void invoke("disconnect_kick_oauth")
+    .then(() => void refreshKickUi())
+    .catch(() => undefined);
+  renderStatus("idle");
+});
 
 // Restore live state from the backend when running inside Tauri.
 if (isTauri) {
@@ -406,6 +626,14 @@ if (isTauri) {
   void listen<{ state: string; detail?: string }>("goal-status", (e) => {
     renderGoalStatus(e.payload.state, e.payload.detail);
   }).catch(() => undefined);
+  // Auto-connect: Kick OAuth first, else the remembered manual channel.
+  void refreshKickUi().then((s) => {
+    if (s?.connected) {
+      void invoke("auto_connect_kick").catch(() => undefined);
+    } else if (localStorage.getItem("rechat-auto-chat") === "1" && channelInput.value.trim()) {
+      void invoke("connect_chat", { channel: channelInput.value.trim() }).catch(() => undefined);
+    }
+  });
 }
 
 // ---------- M4: customization + profiles ----------
@@ -457,17 +685,63 @@ function buildThemeCss(t: Theme): string {
   return css;
 }
 
+// ---------- M8: ready themes (colors + gradients + game looks) ----------
+type Preset = {
+  id: string;
+  nameFa: string;
+  nameEn: string;
+  theme: Partial<Theme>;
+};
+const PRESETS: Preset[] = [
+  { id: "neon", nameFa: "نئون پیش‌فرض", nameEn: "Neon default", theme: { chat_text_color: "#ffffff", chat_radius: 10, chat_gap: 8, goal_bar_c1: "#16a34a", goal_bar_c2: "#4ade80", goal_bar_height: 22, custom_css: "" } },
+  { id: "fire", nameFa: "آتش", nameEn: "Fire", theme: { chat_text_color: "#fff7ed", chat_radius: 12, chat_gap: 8, goal_bar_c1: "#ea580c", goal_bar_c2: "#ef4444", goal_bar_height: 24, custom_css: ".msg{background:linear-gradient(90deg,rgba(124,45,18,.85),rgba(69,10,10,.85))}" } },
+  { id: "ocean", nameFa: "اقیانوس", nameEn: "Ocean", theme: { chat_text_color: "#f0f9ff", chat_radius: 14, chat_gap: 10, goal_bar_c1: "#0284c7", goal_bar_c2: "#6366f1", goal_bar_height: 22, custom_css: ".msg{background:linear-gradient(90deg,rgba(8,47,73,.85),rgba(30,27,75,.85))}" } },
+  { id: "forest", nameFa: "جنگل", nameEn: "Forest", theme: { chat_text_color: "#f0fdf4", chat_radius: 10, chat_gap: 8, goal_bar_c1: "#15803d", goal_bar_c2: "#a3e635", goal_bar_height: 22, custom_css: "" } },
+  { id: "galaxy", nameFa: "کهکشان", nameEn: "Galaxy", theme: { chat_text_color: "#faf5ff", chat_radius: 16, chat_gap: 10, goal_bar_c1: "#9333ea", goal_bar_c2: "#ec4899", goal_bar_height: 24, custom_css: ".msg{background:linear-gradient(90deg,rgba(59,7,100,.85),rgba(80,7,36,.85))}" } },
+  { id: "gold", nameFa: "طلایی", nameEn: "Gold", theme: { chat_text_color: "#fffbeb", chat_radius: 8, chat_gap: 8, goal_bar_c1: "#b45309", goal_bar_c2: "#fde68a", goal_bar_height: 22, custom_css: "" } },
+  { id: "tactical", nameFa: "تاکتیکی (سبک CS)", nameEn: "Tactical (CS style)", theme: { chat_font_size: 20, chat_text_color: "#e7e5e4", chat_radius: 2, chat_gap: 6, goal_bar_c1: "#d97706", goal_bar_c2: "#f59e0b", goal_bar_height: 18, custom_css: ".msg{border:1px solid rgba(245,158,11,.5)}" } },
+  { id: "gothic", nameFa: "گوتیک (سبک سولزلایک)", nameEn: "Gothic (soulslike style)", theme: { chat_text_color: "#e7e5e4", chat_radius: 4, chat_gap: 8, goal_bar_c1: "#991b1b", goal_bar_c2: "#450a0a", goal_bar_height: 20, custom_css: ".msg{background:linear-gradient(90deg,rgba(12,10,9,.9),rgba(69,10,10,.9));border:1px solid rgba(153,27,27,.6)}" } },
+  { id: "cyber", nameFa: "سایبر", nameEn: "Cyber", theme: { chat_text_color: "#ecfeff", chat_radius: 14, chat_gap: 10, goal_bar_c1: "#06b6d4", goal_bar_c2: "#3b82f6", goal_bar_height: 22, custom_css: ".msg{background:linear-gradient(90deg,rgba(8,51,68,.85),rgba(23,37,84,.85))}" } },
+  { id: "pink", nameFa: "صورتی استریم", nameEn: "Stream pink", theme: { chat_text_color: "#fff1f2", chat_radius: 18, chat_gap: 10, goal_bar_c1: "#db2777", goal_bar_c2: "#8b5cf6", goal_bar_height: 24, custom_css: "" } },
+];
+
+function renderPresetNames(): void {
+  const grid = document.getElementById("presetGrid") as HTMLDivElement;
+  if (!grid) return;
+  grid.innerHTML = "";
+  for (const p of PRESETS) {
+    const btn = document.createElement("button");
+    btn.className = "preset-btn";
+    btn.type = "button";
+    const swatch = document.createElement("div");
+    swatch.className = "preset-swatch";
+    swatch.style.background = `linear-gradient(90deg, ${p.theme.goal_bar_c1 ?? "#16a34a"}, ${p.theme.goal_bar_c2 ?? "#4ade80"})`;
+    const name = document.createElement("span");
+    name.className = "preset-name";
+    name.textContent = lang === "fa" ? p.nameFa : p.nameEn;
+    btn.appendChild(swatch);
+    btn.appendChild(name);
+    btn.addEventListener("click", () => {
+      const next = { ...themeFromControls(), ...p.theme };
+      loadThemeIntoControls(next);
+      updatePreview();
+      scheduleThemeSave();
+    });
+    grid.appendChild(btn);
+  }
+}
+
 const profileSel = $<HTMLSelectElement>("profileSel");
 const newProfileName = $<HTMLInputElement>("newProfileName");
 const ioTa = $<HTMLTextAreaElement>("ioTa");
 const cssTa = $<HTMLTextAreaElement>("cssTa");
 const cssHiCode = document.querySelector("#cssHi code") as HTMLElement;
 const cssHiPre = document.getElementById("cssHi") as HTMLPreElement;
-const previewFrame = $<HTMLIFrameElement>("preview");
+const previewChatFrame = $<HTMLIFrameElement>("previewChat");
+const previewGoalFrame = $<HTMLIFrameElement>("previewGoal");
 
 let themesDoc: ThemesDoc = { profiles: { default: defaultTheme() }, active: "default" };
 let currentProfile = "default";
-let prevKind: "chat" | "goal" = "chat";
 let baseOverlayCss = "";
 
 const num = (el: HTMLInputElement, fallback: number): number => {
@@ -526,14 +800,19 @@ function renderProfileSelect(): void {
 function previewDoc(kind: "chat" | "goal"): string {
   const css = buildThemeCss(themeFromControls());
   const head = `<meta charset="utf-8"><style>${baseOverlayCss}</style><style>${css}</style>`;
+  const dir = lang === "fa" ? "rtl" : "ltr";
+  const fmt = new Intl.NumberFormat(lang === "fa" ? "fa-IR" : "en-US");
   if (kind === "chat") {
-    return `<!doctype html><html dir="rtl"><head>${head}</head><body><div id="pinned"><div class="msg" dir="rtl"><span class="badge moderator">مدیر</span><span class="user" style="color:#4ade80">tahaa</span>: این پیام پین‌شده است</div></div><div id="messages"><div class="msg" dir="rtl"><span class="badge moderator">مدیر</span><span class="user" style="color:#4ade80">tahaa</span>: سلام به همه! بازی امشب سولزلایک است</div><div class="msg" dir="ltr"><span class="user" style="color:#58a6ff">soul_fan</span>: this boss fight is insane 🔥</div><div class="msg" dir="rtl"><span class="badge vip">VIP</span><span class="user" style="color:#f472b6">nightowl</span>: چت فارسی و انگلیسی قاطی هم خوب درمیاد، great stream!</div></div></body></html>`;
+    const mod = lang === "fa" ? "مدیر" : "Mod";
+    return `<!doctype html><html dir="${dir}"><head>${head}</head><body><div id="pinned"><div class="msg" dir="rtl"><span class="badge moderator">${mod}</span><span class="user" style="color:#4ade80">tahaa</span>: ${lang === "fa" ? "این پیام پین‌شده است" : "This message is pinned"}</div></div><div id="messages"><div class="msg" dir="rtl"><span class="badge moderator">${mod}</span><span class="user" style="color:#4ade80">tahaa</span>: ${lang === "fa" ? "سلام به همه! بازی امشب سولزلایک است" : "Hey everyone! Tonight we play a soulslike"}</div><div class="msg" dir="ltr"><span class="user" style="color:#58a6ff">soul_fan</span>: this boss fight is insane 🔥</div><div class="msg" dir="rtl"><span class="badge vip">VIP</span><span class="user" style="color:#f472b6">nightowl</span>: ${lang === "fa" ? "چت فارسی و انگلیسی قاطی هم خوب درمیاد، great stream!" : "Persian and English chat mix nicely, great stream!"}</div></div></body></html>`;
   }
-  return `<!doctype html><html dir="rtl"><head>${head}</head><body><div id="goal"><div class="title">ارتقا استریم</div><div class="values"><span>۱۲٬۵۰۰٬۰۰۰</span> از <span>۳۰٬۰۰۰٬۰۰۰</span> <span>تومان</span> — <span>۴۲٪</span></div><div class="bar"><div class="fill" style="width:42%"></div></div><div id="goalError"></div></div></body></html>`;
+  const unit = lang === "fa" ? "تومان" : "Toman";
+  return `<!doctype html><html dir="${dir}"><head>${head}</head><body><div id="goal"><div class="title">${lang === "fa" ? "ارتقا استریم" : "Stream upgrade"}</div><div class="values"><span>${fmt.format(12500000)}</span> ${lang === "fa" ? "از" : "of"} <span>${fmt.format(30000000)}</span> <span>${unit}</span> — <span>${fmt.format(42)}٪</span></div><div class="bar"><div class="fill" style="width:42%"></div></div><div id="goalError"></div></div></body></html>`;
 }
 
 function updatePreview(): void {
-  previewFrame.srcdoc = previewDoc(prevKind);
+  previewChatFrame.srcdoc = previewDoc("chat");
+  previewGoalFrame.srcdoc = previewDoc("goal");
 }
 
 function escLite(s: string): string {
@@ -727,13 +1006,17 @@ async function copyText(text: string, btn: HTMLButtonElement): Promise<void> {
   btn.textContent = dict[lang].copied;
   setTimeout(() => (btn.textContent = prev), 1500);
 }
+function profileQuery(): string {
+  const parts: string[] = [];
+  if (currentProfile !== "default") parts.push(`profile=${encodeURIComponent(currentProfile)}`);
+  parts.push(`lang=${lang}`);
+  return `?${parts.join("&")}`;
+}
 $("copyChatProfileBtn").addEventListener("click", (e) => {
-  const q = currentProfile === "default" ? "" : `?profile=${encodeURIComponent(currentProfile)}`;
-  void copyText(`${base}/chat${q}`, e.currentTarget as HTMLButtonElement);
+  void copyText(`${base}/chat${profileQuery()}`, e.currentTarget as HTMLButtonElement);
 });
 $("copyGoalProfileBtn").addEventListener("click", (e) => {
-  const q = currentProfile === "default" ? "" : `?profile=${encodeURIComponent(currentProfile)}`;
-  void copyText(`${base}/goal${q}`, e.currentTarget as HTMLButtonElement);
+  void copyText(`${base}/goal${profileQuery()}`, e.currentTarget as HTMLButtonElement);
 });
 
 $("cssSampleBtn").addEventListener("click", () => {
@@ -746,14 +1029,6 @@ $("cssSampleBtn").addEventListener("click", () => {
 $("cssDocsBtn").addEventListener("click", () => {
   const docs = document.getElementById("cssDocs") as HTMLDivElement;
   docs.hidden = !docs.hidden;
-});
-$("prevChatBtn").addEventListener("click", () => {
-  prevKind = "chat";
-  updatePreview();
-});
-$("prevGoalBtn").addEventListener("click", () => {
-  prevKind = "goal";
-  updatePreview();
 });
 
 // The overlay stylesheet is a hashed asset in the build, so find it
@@ -771,8 +1046,13 @@ async function loadBaseCss(): Promise<void> {
   }
   updatePreview();
 }
-void loadBaseCss();
-void reloadThemes();
+
+// ---------- App settings: updater ----------
+const autoUpdateChk = $<HTMLInputElement>("autoUpdateChk");
+autoUpdateChk.checked = localStorage.getItem("rechat-auto-update") !== "0";
+autoUpdateChk.addEventListener("change", () => {
+  localStorage.setItem("rechat-auto-update", autoUpdateChk.checked ? "1" : "0");
+});
 
 // Built-in updater (M7): the plugin's own dialog (dialog: true in
 // tauri.conf.json) asks the user and shows the release notes; this
@@ -792,5 +1072,10 @@ async function runUpdateCheck(manual: boolean): Promise<void> {
   }
 }
 $("updateBtn").addEventListener("click", () => void runUpdateCheck(true));
-// Auto-check once at startup (silent unless an update dialog appears).
-void runUpdateCheck(false);
+// Auto-check once at startup (silent unless an update dialog appears),
+// unless the user turned it off in App settings.
+if (autoUpdateChk.checked) void runUpdateCheck(false);
+
+applyLang();
+void loadBaseCss();
+void reloadThemes();

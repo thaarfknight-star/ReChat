@@ -6,7 +6,39 @@ header img { width: 44px; height: 44px; border-radius: 10px; }
 header h1 { margin: 0; font-size: 22px; }
 header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 header button { margin-inline-start: auto; }
-main { max-width: 860px; margin: 0 auto; padding: 20px; display: grid; gap: 16px; }
+/* ---- M8 layout: nav + two-column shell + fixed preview ---- */
+nav#mainNav { display: flex; gap: 8px; padding: 14px 24px 0; max-width: 1440px; margin: 0 auto; }
+nav#mainNav button { background: transparent; color: var(--muted); border: 1px solid transparent; border-bottom: 0; border-radius: 10px 10px 0 0; padding: 10px 18px; }
+nav#mainNav button.active { background: var(--card); color: var(--text); border-color: var(--line); }
+.shell { max-width: 1440px; margin: 0 auto; padding: 20px; display: grid; gap: 16px; grid-template-columns: 380px minmax(0, 1fr); align-items: start; }
+.shell main { grid-column: 2; display: grid; gap: 16px; align-content: start; }
+.shell aside { grid-column: 1; }
+.shell.ltr { grid-template-columns: minmax(0, 1fr) 380px; }
+.shell.ltr main { grid-column: 1; }
+.shell.ltr aside { grid-column: 2; }
+.page { display: grid; gap: 16px; align-content: start; }
+#previewPane { position: sticky; top: 16px; display: grid; gap: 16px; }
+.preview-box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.preview-head { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+#previewChat, #previewGoal { width: 100%; border: 1px solid var(--line); border-radius: 8px; background-color: #1c1c1c; background-image: linear-gradient(45deg, #262626 25%, transparent 25%), linear-gradient(-45deg, #262626 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #262626 75%), linear-gradient(-45deg, transparent 75%, #262626 75%); background-size: 24px 24px; background-position: 0 0, 0 12px, 12px -12px, -12px 0; }
+#previewChat { height: 420px; }
+#previewGoal { height: 200px; }
+@media (max-width: 900px) {
+  .shell, .shell.ltr { grid-template-columns: 1fr; }
+  .shell main, .shell aside { grid-column: auto; }
+  #previewPane { position: static; }
+}
+/* ---- M8 accordion + presets ---- */
+.acc-head { width: 100%; display: flex; justify-content: space-between; align-items: center; background: transparent; color: var(--text); border: 0; padding: 2px 0; font-size: 16px; }
+.acc-head .acc-arrow { transition: transform 0.2s; color: var(--muted); }
+.acc.open .acc-arrow { transform: rotate(180deg); }
+.acc-body { margin-top: 12px; }
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.preset-btn { background: var(--bg); border: 1px solid var(--line); color: var(--text); padding: 0 0 10px; overflow: hidden; }
+.preset-swatch { height: 44px; }
+.preset-name { display: block; padding-top: 8px; font-size: 13px; }
+details summary { cursor: pointer; color: var(--accent); font-size: 13px; margin-top: 12px; }
+input[type="password"] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; direction: ltr; text-align: left; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
 .card h2 { margin: 0 0 12px; font-size: 16px; }
 label { display: block; color: var(--muted); font-size: 13px; margin: 10px 0 6px; }
@@ -39,7 +71,6 @@ input[type="checkbox"] { width: auto; accent-color: var(--neon); }
 .tok-prop { color: #79c0ff; }
 .tok-num { color: #ff9e64; }
 .tok-imp { color: #ff7b72; font-weight: 700; }
-#preview { width: 100%; height: 280px; border: 1px solid var(--line); border-radius: 8px; background-color: #1c1c1c; background-image: linear-gradient(45deg, #262626 25%, transparent 25%), linear-gradient(-45deg, #262626 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #262626 75%), linear-gradient(-45deg, transparent 75%, #262626 75%); background-size: 24px 24px; background-position: 0 0, 0 12px, 12px -12px, -12px 0; }
 code { background: rgba(88, 166, 255, 0.15); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
 
 /* ---- M5 Meld guide ---- */

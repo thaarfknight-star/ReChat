@@ -6,6 +6,7 @@
 
 mod goal;
 mod kick;
+mod kick_auth;
 mod server;
 mod theme;
 
@@ -13,6 +14,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use goal::{GoalHub, GoalStatus};
 use kick::{ChatHub, ChatStatus, Filters};
+use kick_auth::{KickAuthState, KickOauthStatus};
 use theme::{Theme, ThemeStore, Themes};
 use tauri::Manager;
 
@@ -222,6 +224,44 @@ async fn export_themes(store: tauri::State<'_, Arc<ThemeStore>>) -> Result<Strin
     serde_json::to_string_pretty(&*t).map_err(|e| e.to_string())
 }
 
+// ---------- Kick OAuth (M8) ----------
+
+#[tauri::command]
+async fn get_kick_oauth_config(
+    auth: tauri::State<'_, Arc<KickAuthState>>,
+) -> Result<KickOauthStatus, String> {
+    Ok(auth.status().await)
+}
+
+#[tauri::command]
+async fn save_kick_oauth_config(
+    auth: tauri::State<'_, Arc<KickAuthState>>,
+    client_id: String,
+    client_secret: String,
+) -> Result<(), String> {
+    auth.save_client(client_id, client_secret).await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn start_kick_oauth(auth: tauri::State<'_, Arc<KickAuthState>>) -> Result<(), String> {
+    auth.start().await
+}
+
+#[tauri::command]
+async fn disconnect_kick_oauth(auth: tauri::State<'_, Arc<KickAuthState>>) -> Result<(), String> {
+    auth.clear_tokens().await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn auto_connect_kick(
+    auth: tauri::State<'_, Arc<KickAuthState>>,
+    hub: tauri::State<'_, Arc<ChatHub>>,
+) -> Result<String, String> {
+    auth.auto_connect(hub.inner().clone()).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -234,15 +274,17 @@ pub fn run() {
                 .app_data_dir()
                 .unwrap_or_else(|_| PathBuf::from("."));
             let store = Arc::new(ThemeStore::load_sync(data_dir.join("themes.json")));
+            let auth = Arc::new(KickAuthState::load_sync(data_dir));
             app.manage(hub.clone());
             app.manage(goal_hub.clone());
             app.manage(store.clone());
+            app.manage(auth.clone());
             let dist = dist_dir(app.handle());
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 hub.set_emitter(handle.clone()).await;
                 goal_hub.set_emitter(handle).await;
-                server::run(dist, hub, goal_hub, store).await;
+                server::run(dist, hub, goal_hub, store, auth).await;
             });
             Ok(())
         })
@@ -263,7 +305,12 @@ pub fn run() {
             delete_profile,
             set_active_profile,
             import_themes,
-            export_themes
+            export_themes,
+            get_kick_oauth_config,
+            save_kick_oauth_config,
+            start_kick_oauth,
+            disconnect_kick_oauth,
+            auto_connect_kick
         ])
         .run(tauri::generate_context!())
         .expect("error while running ReChat");
