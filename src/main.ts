@@ -242,8 +242,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۰",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۰ (M9 — بازطراحی کامل رابط کاربری). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۱",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۱ (اصلاح چیدمان فارسی و ترجمه‌ی برچسب‌های وضعیت). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -410,8 +410,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.0",
-    aboutTextNew: "Version 0.3.0 (M9 — full UI redesign). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.1",
+    aboutTextNew: "Version 0.3.1 (Persian layout mirror fix + status pill translation). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -428,7 +428,6 @@ const langBtn = $<HTMLButtonElement>("langBtn");
 const chatStatus = $("chatStatus");
 const goalStatus = $("goalStatus");
 const hideCmdChk = $<HTMLInputElement>("hideCmdChk");
-const shell = $("shell");
 
 let lang: Lang = (localStorage.getItem("rechat-lang") as Lang) || "fa";
 channelInput.value = localStorage.getItem("rechat-channel") ?? "";
@@ -560,7 +559,13 @@ function humanChatError(detail?: string): string {
   if (d.includes("network") || d.includes("fetch") || d.includes("timed out") || d.includes("econnrefused") || d.includes("dns")) return t.channelNetwork;
   return t.channelGeneric;
 }
+let lastChatState = "idle";
+let lastChatChannel = "";
+let lastChatDetail = "";
 function renderStatus(state: string, channel?: string, detail?: string): void {
+  lastChatState = state;
+  lastChatChannel = channel ?? "";
+  lastChatDetail = detail ?? "";
   const t = dict[lang];
   const channelError = $("channelError");
   let dot: "ok" | "warn" | "bad" | "idle" = "idle";
@@ -596,7 +601,6 @@ function applyLang(): void {
   const t = dict[lang];
   document.documentElement.lang = lang;
   document.documentElement.dir = lang === "fa" ? "rtl" : "ltr";
-  shell.classList.toggle("ltr", lang === "en");
   ($("tagline").textContent = t.tagline);
   ($("navConnect").textContent = t.navConnect);
   ($("navCustomize").textContent = t.navCustomize);
@@ -783,6 +787,11 @@ function applyLang(): void {
   langBtn.textContent = lang === "fa" ? "English" : "فارسی";
   renderPresetNames();
   refreshOverlayUrls();
+  // Re-render the status pills from the last known states: otherwise a
+  // pill keeps the previous language's text until the next status event
+  // (0.3.1: the header Goal pill stayed Persian after switching to English).
+  renderStatus(lastChatState, lastChatChannel, lastChatDetail);
+  renderGoalStatus(lastGoalState, lastGoalDetail);
 }
 
 function setLang(next: Lang): void {
@@ -859,7 +868,11 @@ $("disconnectBtn").addEventListener("click", () => {
   renderStatus("idle");
 });
 
+let lastGoalState = "idle";
+let lastGoalDetail = "";
 function renderGoalStatus(state: string, detail?: string): void {
+  lastGoalState = state;
+  lastGoalDetail = detail ?? "";
   const t = dict[lang];
   let s: string;
   let dot: "ok" | "warn" | "bad" | "idle" = "idle";

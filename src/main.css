@@ -10,12 +10,15 @@ header button { margin-inline-start: auto; }
 nav#mainNav { display: flex; gap: 8px; padding: 14px 24px 0; max-width: 1440px; margin: 0 auto; }
 nav#mainNav button { background: transparent; color: var(--muted); border: 1px solid transparent; border-bottom: 0; border-radius: 10px 10px 0 0; padding: 10px 18px; }
 nav#mainNav button.active { background: var(--card); color: var(--text); border-color: var(--line); }
-.shell { max-width: 1440px; margin: 0 auto; padding: 20px; display: grid; gap: 16px; grid-template-columns: 380px minmax(0, 1fr); align-items: start; }
-.shell main { grid-column: 2; display: grid; gap: 16px; align-content: start; }
-.shell aside { grid-column: 1; }
-.shell.ltr { grid-template-columns: minmax(0, 1fr) 380px; }
-.shell.ltr main { grid-column: 1; }
-.shell.ltr aside { grid-column: 2; }
+/* NOTE (0.3.1): one rule set for both languages — grid lines follow the
+   page direction, so the browser mirrors the layout itself (LTR: main
+   left, preview right; RTL: main right, preview left). The old split
+   default/.ltr rules did NOT mirror in Persian: they pinned main left
+   and preview right in both languages, and in the Tauri webview the
+   Persian combination also dropped the preview pane below the content. */
+.shell { max-width: 1440px; margin: 0 auto; padding: 20px; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 380px; align-items: start; }
+.shell main { grid-column: 1; display: grid; gap: 16px; align-content: start; }
+.shell aside { grid-column: 2; }
 .page { display: grid; gap: 16px; align-content: start; }
 /* NOTE: author display rules beat the UA [hidden] rule, so without
    this every page renders stacked (the M8 layout bug: guide +
@@ -28,7 +31,7 @@ nav#mainNav button.active { background: var(--card); color: var(--text); border-
 #previewChat { height: 420px; }
 #previewGoal { height: 200px; }
 @media (max-width: 900px) {
-  .shell, .shell.ltr { grid-template-columns: 1fr; }
+  .shell { grid-template-columns: 1fr; }
   .shell main, .shell aside { grid-column: auto; }
   #previewPane { position: static; }
 }
