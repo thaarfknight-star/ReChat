@@ -180,9 +180,14 @@ const dict: Record<Lang, Record<string, string>> = {
     error: "خطا در اتصال",
     // ---- M9 ----
     connTitle: "اتصال کیک",
-    connNote: "یک حالت را انتخاب کن؛ ساده‌ترین حالت «نام کانال» است و بدون هیچ تنظیم اضافه‌ای کار می‌کند.",
+    connNote: "یک حالت را انتخاب کن؛ «نام کانال» ساده‌ترین حالت است، و اگر از ایران وصل می‌شوی و کیک مستقیم باز نمی‌شود، «مستراستریم» را بزن.",
     modeChannel: "نام کانال (ساده)",
     modeOauth: "ورود با Kick (پیشنهادی)",
+    modeMs: "مستراستریم (ایران)",
+    msLinkLabel: "لینک ویجت چت مستراستریم",
+    msNote: "لینک ویجت را از داشبورد مستراستریم کپی کن؛ ReChat فقط با masterstream.ir حرف می‌زند و پیام‌ها با همان قالب و فیلترهای خود ReChat نشان داده می‌شوند. لینک فقط روی همین سیستم می‌ماند.",
+    msEmpty: "لینک ویجت مستراستریم را بنویس.",
+    msInvalid: "لینک باید لینک ویجت مستراستریم باشد.",
     channelLabelNew: "نام کانال یا لینک کانال",
     channelHint: "پیام‌های زنده‌ی کانال در اورلی نمایش داده می‌شوند.",
     channelEmpty: "نام کانال را بنویس.",
@@ -244,8 +249,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۴",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۴ (مسیر واقعی فایل‌های اورلی در نصب‌شده: _up_/dist — صفحه‌ی Goal و چت در نصب‌شده هم باز می‌شوند). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۵",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۵ (حالت چت مستراستریم: وقتی کیک از ایران مستقیم باز نمی‌شود، با لینک ویجت مستراستریم وصل شو؛ پیام‌ها با همان قالب و فیلترهای ReChat می‌آیند). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -350,9 +355,14 @@ const dict: Record<Lang, Record<string, string>> = {
     error: "Connection error",
     // ---- M9 ----
     connTitle: "Kick connection",
-    connNote: "Pick a mode; the simplest is “Channel name” and it works with no extra setup.",
+    connNote: "Pick a mode; “Channel name” is the simplest, and if you connect from Iran and Kick does not open directly, pick “MasterStream”.",
     modeChannel: "Channel name (simple)",
     modeOauth: "Sign in with Kick (recommended)",
+    modeMs: "MasterStream (Iran)",
+    msLinkLabel: "MasterStream chat widget link",
+    msNote: "Copy the widget link from your MasterStream dashboard; ReChat talks only to masterstream.ir and messages arrive with ReChat's own theme and filters. The link stays on this machine only.",
+    msEmpty: "Type the MasterStream widget link.",
+    msInvalid: "That must be a MasterStream widget link.",
     channelLabelNew: "Channel name or channel link",
     channelHint: "Live channel messages show up in the overlay.",
     channelEmpty: "Type a channel name.",
@@ -414,8 +424,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.4",
-    aboutTextNew: "Version 0.3.4 (real installed overlay path _up_/dist — Goal and chat pages now open in the installed app). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.5",
+    aboutTextNew: "Version 0.3.5 (MasterStream chat mode: when Kick is not reachable directly from Iran, connect with your MasterStream widget link; messages arrive with ReChat's own theme and filters). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -427,6 +437,7 @@ const isTauri =
   (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ !== undefined;
 
 const channelInput = $<HTMLInputElement>("channelInput");
+const msLinkInput = $<HTMLInputElement>("msLinkInput");
 const goalInput = $<HTMLInputElement>("goalInput");
 const langBtn = $<HTMLButtonElement>("langBtn");
 const chatStatus = $("chatStatus");
@@ -435,6 +446,7 @@ const hideCmdChk = $<HTMLInputElement>("hideCmdChk");
 
 let lang: Lang = (localStorage.getItem("rechat-lang") as Lang) || "fa";
 channelInput.value = localStorage.getItem("rechat-channel") ?? "";
+msLinkInput.value = localStorage.getItem("rechat-masterstream") ?? "";
 goalInput.value = localStorage.getItem("rechat-goal") ?? "";
 
 type Filters = {
@@ -559,6 +571,9 @@ function statusText(state: string, channel?: string, detail?: string): string {
 function humanChatError(detail?: string): string {
   const t = dict[lang];
   const d = (detail ?? "").toLowerCase();
+  // MasterStream backend details are already human-readable Persian;
+  // show them as-is instead of the generic Kick fallback.
+  if (d.includes("ویجت") || d.includes("مستراستریم") || d.includes("masterstream")) return detail ?? "";
   if (d.includes("not found") || d.includes("404") || d.includes("no channel")) return t.channelNotFound;
   if (d.includes("network") || d.includes("fetch") || d.includes("timed out") || d.includes("econnrefused") || d.includes("dns")) return t.channelNetwork;
   return t.channelGeneric;
@@ -614,6 +629,11 @@ function applyLang(): void {
   ($("connNote").textContent = t.connNote);
   ($("modeChannelBtn").textContent = t.modeChannel);
   ($("modeOauthBtn").textContent = t.modeOauth);
+  ($("modeMsBtn").textContent = t.modeMs);
+  ($("msLinkLabel").textContent = t.msLinkLabel);
+  ($("msNote").textContent = t.msNote);
+  ($("msConnectBtn").textContent = t.connect);
+  ($("msDisconnectBtn").textContent = t.disconnect);
   ($("kickAdvancedSummary").textContent = t.kickAdvancedSummary);
   ($("kickAdvancedNote").textContent = t.kickAdvancedNote);
   ($("kickClientIdLabel").textContent = t.kickClientIdLabel);
@@ -835,16 +855,55 @@ for (const head of document.querySelectorAll<HTMLButtonElement>(".acc-head")) {
 }
 
 // ---------- M9 connection modes (channel = default, OAuth = tab) ----------
-function setConnMode(mode: "channel" | "oauth"): void {
+// M9.5 adds a third tab: MasterStream widget link (for Iran, where
+// Kick itself is not directly reachable).
+type ConnMode = "channel" | "oauth" | "masterstream";
+function setConnMode(mode: ConnMode): void {
   localStorage.setItem("rechat-conn-mode", mode);
   ($("pane-channel").hidden = mode !== "channel");
   ($("pane-oauth").hidden = mode !== "oauth");
+  ($("pane-masterstream").hidden = mode !== "masterstream");
   ($("modeChannelBtn").classList.toggle("active", mode === "channel"));
   ($("modeOauthBtn").classList.toggle("active", mode === "oauth"));
+  ($("modeMsBtn").classList.toggle("active", mode === "masterstream"));
 }
 $("modeChannelBtn").addEventListener("click", () => setConnMode("channel"));
 $("modeOauthBtn").addEventListener("click", () => setConnMode("oauth"));
-setConnMode((localStorage.getItem("rechat-conn-mode") as "channel" | "oauth") || "channel");
+$("modeMsBtn").addEventListener("click", () => setConnMode("masterstream"));
+setConnMode((localStorage.getItem("rechat-conn-mode") as ConnMode) || "channel");
+
+// ---------- M9.5 MasterStream connect ----------
+$("msConnectBtn").addEventListener("click", () => {
+  const link = msLinkInput.value.trim();
+  localStorage.setItem("rechat-masterstream", link);
+  if (!link) {
+    msLinkInput.classList.add("invalid");
+    ($("msError").textContent = dict[lang].msEmpty);
+    return;
+  }
+  if (!link.includes("masterstream.ir")) {
+    msLinkInput.classList.add("invalid");
+    ($("msError").textContent = dict[lang].msInvalid);
+    return;
+  }
+  msLinkInput.classList.remove("invalid");
+  ($("msError").textContent = "");
+  localStorage.setItem("rechat-auto-chat", "masterstream");
+  if (isTauri) {
+    void invoke("connect_masterstream", { link }).catch(() => {
+      renderStatus("error", "MasterStream", "network error");
+    });
+    renderStatus("resolving", "MasterStream");
+  } else {
+    renderStatus("idle");
+    showToast(dict[lang].saved);
+  }
+});
+$("msDisconnectBtn").addEventListener("click", () => {
+  localStorage.removeItem("rechat-auto-chat");
+  if (isTauri) void invoke("disconnect_chat").catch(() => undefined);
+  renderStatus("idle");
+});
 
 // ---------- Manual chat connect (fallback) ----------
 $("connectBtn").addEventListener("click", () => {
@@ -1141,6 +1200,8 @@ if (isTauri) {
       void invoke("auto_connect_kick").catch(() => undefined);
     } else if (localStorage.getItem("rechat-auto-chat") === "1" && channelInput.value.trim()) {
       void invoke("connect_chat", { channel: channelInput.value.trim() }).catch(() => undefined);
+    } else if (localStorage.getItem("rechat-auto-chat") === "masterstream" && msLinkInput.value.trim()) {
+      void invoke("connect_masterstream", { link: msLinkInput.value.trim() }).catch(() => undefined);
     }
   });
 }

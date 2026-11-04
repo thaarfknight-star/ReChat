@@ -42,7 +42,7 @@ use tauri::Emitter;
 use tokio::sync::{broadcast, RwLock};
 use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
-const USER_AGENT: &str = "ReChat/0.3.4";
+const USER_AGENT: &str = "ReChat/0.3.5";
 const FALLBACK_PUSHER_KEY: &str = "34bf7a0ff419a2a775b9";
 const FALLBACK_CLUSTER: &str = "us2";
 
@@ -185,8 +185,14 @@ impl ChatHub {
         self.filters.read().await.clone()
     }
 
-    async fn blocks(&self, m: &ChatMessage) -> bool {
+    pub(crate) async fn blocks(&self, m: &ChatMessage) -> bool {
         self.filters.read().await.blocks(m)
+    }
+
+    /// Send an event to every overlay subscriber (other chat sources,
+    /// e.g. MasterStream, use the same hub).
+    pub(crate) fn emit(&self, ev: ChatEvent) {
+        let _ = self.tx.send(ev);
     }
 
     pub fn generation(&self) -> u64 {

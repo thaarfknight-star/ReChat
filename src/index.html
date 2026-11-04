@@ -40,6 +40,7 @@
           <div class="seg" role="tablist">
             <button type="button" data-mode="channel" class="active" id="modeChannelBtn">نام کانال (ساده)</button>
             <button type="button" data-mode="oauth" id="modeOauthBtn">ورود با Kick (پیشنهادی)</button>
+            <button type="button" data-mode="masterstream" id="modeMsBtn">مستراستریم (ایران)</button>
           </div>
           <div id="pane-channel">
             <label id="channelLabel" for="channelInput">نام کانال یا لینک کانال</label>
@@ -50,6 +51,16 @@
               <button id="disconnectBtn" class="secondary">قطع اتصال</button>
             </div>
             <p id="chatNote" class="hint">پیام‌های زنده‌ی کانال در اورلی نمایش داده می‌شوند.</p>
+          </div>
+          <div id="pane-masterstream" hidden>
+            <label id="msLinkLabel" for="msLinkInput">لینک ویجت چت مستراستریم</label>
+            <input id="msLinkInput" type="text" class="ltr-input" placeholder="https://masterstream.ir/widget/chat_tools/…" autocomplete="off" />
+            <div id="msError" class="field-error" role="alert"></div>
+            <div class="row" style="margin-top:6px">
+              <button id="msConnectBtn" class="primary">اتصال به مستراستریم</button>
+              <button id="msDisconnectBtn" class="secondary">قطع اتصال</button>
+            </div>
+            <p id="msNote" class="hint">لینک ویجت را از داشبورد مستراستریم کپی کن؛ ReChat فقط با masterstream.ir حرف می‌زند و پیام‌ها با همان قالب و فیلترهای خود ReChat نشان داده می‌شوند. لینک فقط روی همین سیستم می‌ماند.</p>
           </div>
           <div id="pane-oauth" hidden>
             <p id="kickOauthState" class="hint">وصل نیست.</p>

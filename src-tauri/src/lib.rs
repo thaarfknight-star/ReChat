@@ -7,6 +7,7 @@
 mod goal;
 mod kick;
 mod kick_auth;
+mod masterstream;
 mod server;
 mod theme;
 
@@ -72,6 +73,25 @@ async fn connect_chat(
 #[tauri::command]
 async fn disconnect_chat(hub: tauri::State<'_, Arc<ChatHub>>) -> Result<(), String> {
     hub.disconnect().await;
+    Ok(())
+}
+
+/// MasterStream chat (M9.5): the widget link is passed in, the backend
+/// fetches the widget page for its login values and opens the widget's
+/// Socket.IO connection. `disconnect()` first bumps the generation so
+/// any older Kick/MasterStream loop exits; the new loop captures the
+/// fresh generation. The link itself is kept only in the frontend's
+/// localStorage on the user's machine.
+#[tauri::command]
+async fn connect_masterstream(
+    hub: tauri::State<'_, Arc<ChatHub>>,
+    link: String,
+) -> Result<(), String> {
+    if link.trim().is_empty() {
+        return Err("لینک ویجت مستراستریم خالی است".to_string());
+    }
+    hub.disconnect().await;
+    masterstream::spawn_masterstream_loop(hub.inner().clone(), link);
     Ok(())
 }
 
@@ -361,6 +381,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             connect_chat,
             disconnect_chat,
+            connect_masterstream,
             chat_status,
             save_filters,
             get_filters,
