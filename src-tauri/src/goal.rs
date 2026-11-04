@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::sync::RwLock;
 
-const USER_AGENT: &str = "ReChat/0.2.1";
+const USER_AGENT: &str = "ReChat/0.2.2";
 const POLL_SECS: u64 = 10;
 
 /// Goal values ready for the overlay.

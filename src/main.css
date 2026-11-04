@@ -17,6 +17,10 @@ nav#mainNav button.active { background: var(--card); color: var(--text); border-
 .shell.ltr main { grid-column: 1; }
 .shell.ltr aside { grid-column: 2; }
 .page { display: grid; gap: 16px; align-content: start; }
+/* NOTE: author display rules beat the UA [hidden] rule, so without
+   this every page renders stacked (the M8 layout bug: guide +
+   settings + about all visible at once, preview pushed to the bottom). */
+.page[hidden] { display: none; }
 #previewPane { position: sticky; top: 16px; display: grid; gap: 16px; }
 .preview-box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
 .preview-head { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
