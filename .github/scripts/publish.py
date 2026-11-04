@@ -1,6 +1,8 @@
 """Publish a ReChat tag release: body = that version's CHANGELOG_FA.md
-section, then build the Tauri updater feed and upload it to the rolling
-`update-feed` release. Run in CI with GH_TOKEN and TAG set."""
+section, then reuse tauri-action's own latest.json as the updater feed
+(only replacing its notes with the changelog section so the update
+dialog shows it) and upload it to the rolling `update-feed` release.
+Run in CI with GH_TOKEN and TAG set."""
 
 import json
 import os
@@ -37,38 +39,26 @@ def main():
     if body is None:
         raise SystemExit(f"no CHANGELOG_FA.md section for {version}")
 
-    # Updater artifact: the .nsis.zip + its .sig from the draft release.
+    # tauri-action's own updater feed: it already contains the correct
+    # updater artifact + signature for this stack (modern Tauri signs
+    # the installer itself, not a .zip). Reuse it, don't rebuild it.
     assets = json.loads(
         run(["gh", "release", "view", tag, "--json", "assets", "-q", ".assets"])
     )
-    zip_asset = next(
-        (a for a in assets if a["name"].endswith(".nsis.zip")), None
+    latest = next(
+        (a for a in assets if a["name"] == "latest.json"), None
     )
-    if zip_asset is None:
-        raise SystemExit("no .nsis.zip updater artifact on the release")
-    sig_name = zip_asset["name"] + ".sig"
-    sig_asset = next((a for a in assets if a["name"] == sig_name), None)
-    if sig_asset is None:
-        raise SystemExit(f"missing signature asset {sig_name}")
-    sig = run(
-        ["gh", "api", f"repos/{repo}/releases/assets/{sig_asset['id']}",
+    if latest is None:
+        raise SystemExit("no latest.json updater feed on the release")
+    feed_text = run(
+        ["gh", "api", f"repos/{repo}/releases/assets/{latest['id']}",
          "-H", "Accept: application/octet-stream"]
-    ).strip()
-
-    feed = {
-        "version": version,
-        "notes": body,
-        "pub_date": datetime.now(timezone.utc).isoformat(),
-        "platforms": {
-            "windows-x86_64": {
-                "signature": sig,
-                "url": (
-                    f"https://github.com/{repo}/releases/download/"
-                    f"{tag}/{zip_asset['name']}"
-                ),
-            }
-        },
-    }
+    )
+    feed = json.loads(feed_text)
+    if "windows-x86_64" not in feed.get("platforms", {}):
+        raise SystemExit("latest.json has no windows-x86_64 platform")
+    feed["notes"] = body
+    feed["pub_date"] = datetime.now(timezone.utc).isoformat()
     with open("update-feed.json", "w", encoding="utf-8") as f:
         json.dump(feed, f, ensure_ascii=False, indent=2)
 
