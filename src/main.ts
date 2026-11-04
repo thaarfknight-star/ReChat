@@ -152,6 +152,7 @@ const dict: Record<Lang, Record<string, string>> = {
     goalLive: "متصل ✓",
     goalError: "خطا در Goal",
     overlayTitle: "لینک‌های اورلی (سرور محلی)",
+    chatLinkLabel: "چت",
     copyLink: "کپی لینک",
     overlayNote: "این لینک‌ها را در Meld به‌عنوان Browser Source اضافه کنید.",
     settingsTitle: "تنظیمات برنامه",
@@ -190,6 +191,7 @@ const dict: Record<Lang, Record<string, string>> = {
     channelGeneric: "اتصال ناموفق بود؛ دوباره تلاش کن.",
     goalInvalid: "لینک درست نیست؛ لینک کامل Donofa را کپی کن.",
     goalNetwork: "Goal خوانده نشد؛ اینترنت را چک کن و دوباره ذخیره کن.",
+    goalServer: "Donofa به این درخواست جواب نداد؛ کمی بعد با همان لینک دوباره امتحان کن.",
     goalGeneric: "Goal خوانده نشد؛ دوباره ذخیره کن.",
     kickAdvancedSummary: "پیشرفته: Client ID و Client Secret",
     kickAdvancedNote: "برای ورود با Kick باید یک بار در Kick برنامه بسازی و این دو مقدار را اینجا ذخیره کنی؛ فقط روی همین سیستم می‌مانند.",
@@ -242,8 +244,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۱",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۱ (اصلاح چیدمان فارسی و ترجمه‌ی برچسب‌های وضعیت). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۲",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۲ (پیام‌های دقیق‌تر خطای Goal و ترجمه‌های جاافتاده). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -320,6 +322,7 @@ const dict: Record<Lang, Record<string, string>> = {
     goalLive: "Connected ✓",
     goalError: "Goal error",
     overlayTitle: "Overlay links (local server)",
+    chatLinkLabel: "Chat",
     copyLink: "Copy link",
     overlayNote: "Add these links in Meld as a Browser Source.",
     settingsTitle: "App settings",
@@ -358,6 +361,7 @@ const dict: Record<Lang, Record<string, string>> = {
     channelGeneric: "Connection failed; try again.",
     goalInvalid: "That link looks wrong; paste the full Donofa link.",
     goalNetwork: "Goal could not be read; check your connection and save again.",
+    goalServer: "Donofa did not answer this request; try again shortly with the same link.",
     goalGeneric: "Goal could not be read; save again.",
     kickAdvancedSummary: "Advanced: Client ID and Client Secret",
     kickAdvancedNote: "To sign in with Kick, create an app in Kick once and save these two values here; they stay on this machine only.",
@@ -410,8 +414,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.1",
-    aboutTextNew: "Version 0.3.1 (Persian layout mirror fix + status pill translation). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.2",
+    aboutTextNew: "Version 0.3.2 (precise Goal error messages + missing translations). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -761,6 +765,8 @@ function applyLang(): void {
   ($("goalLabel").textContent = t.goalLabel);
   ($("goalSaveBtn").textContent = t.save);
   ($("overlayTitle").textContent = t.overlayTitle);
+  ($("chatLinkLabel").textContent = t.chatLinkLabel);
+  ($("goalNote").textContent = t.goalNote);
   ($("copyChatBtn").textContent = t.copyLink);
   ($("copyGoalBtn").textContent = t.copyLink);
   ($("overlayNote").textContent = t.meldHintShort);
@@ -870,6 +876,39 @@ $("disconnectBtn").addEventListener("click", () => {
 
 let lastGoalState = "idle";
 let lastGoalDetail = "";
+function humanGoalError(detail?: string): string {
+  const t = dict[lang];
+  const d = (detail ?? "").toLowerCase();
+  if (
+    d.includes("invalid") ||
+    d.includes("parse") ||
+    d.includes("not a donofa") ||
+    d.includes("404") ||
+    d.includes("لینک goal معتبر نیست") ||
+    d.includes("goal فعالی نیست")
+  ) {
+    return t.goalInvalid;
+  }
+  if (d.includes("دونوفا جواب نداد")) return t.goalServer;
+  if (
+    d.includes("network") ||
+    d.includes("fetch") ||
+    d.includes("timed out") ||
+    d.includes("timeout") ||
+    d.includes("error sending request") ||
+    d.includes("decoding") ||
+    d.includes("dns") ||
+    d.includes("connect") ||
+    d.includes("refused") ||
+    d.includes("reset") ||
+    d.includes("certificate") ||
+    d.includes("ssl") ||
+    d.includes("handshake")
+  ) {
+    return t.goalNetwork;
+  }
+  return t.goalGeneric;
+}
 function renderGoalStatus(state: string, detail?: string): void {
   lastGoalState = state;
   lastGoalDetail = detail ?? "";
@@ -896,13 +935,12 @@ function renderGoalStatus(state: string, detail?: string): void {
   setPill($("hdrGoalStatus"), dot, s);
   const errEl = $("goalErrorText");
   if (state === "error") {
-    const d = (detail ?? "").toLowerCase();
-    errEl.textContent =
-      d.includes("invalid") || d.includes("parse") || d.includes("not a donofa") || d.includes("404")
-        ? t.goalInvalid
-        : d.includes("network") || d.includes("fetch") || d.includes("timed out")
-          ? t.goalNetwork
-          : t.goalGeneric;
+    // 0.3.2: the old mapping sent every backend failure to the generic
+    // "save again" text, hiding whether the link, the network, or Donofa
+    // itself was at fault. reqwest error strings carry none of the old
+    // keywords for DNS/connect/reset/TLS failures, so they all landed in
+    // the generic bucket and told the user to re-save a good link.
+    errEl.textContent = humanGoalError(detail);
   } else {
     errEl.textContent = "";
   }
