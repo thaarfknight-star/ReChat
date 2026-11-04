@@ -38,6 +38,15 @@ nav#mainNav button.active { background: var(--card); color: var(--text); border-
 .preset-swatch { height: 44px; }
 .preset-name { display: block; padding-top: 8px; font-size: 13px; }
 details summary { cursor: pointer; color: var(--accent); font-size: 13px; margin-top: 12px; }
+/* ---- M8.1 VSCode-style CSS editor ---- */
+.editor-gutter { position: absolute; left: 0; top: 0; bottom: 0; width: 38px; overflow: hidden; border-right: 1px solid var(--line); color: var(--muted); font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; line-height: 1.6; text-align: right; pointer-events: none; }
+#cssGutterInner { padding: 12px 8px 12px 0; white-space: pre; }
+.editor pre, .editor textarea { padding-left: 50px !important; }
+.ac-popup { position: absolute; z-index: 5; min-width: 200px; max-width: 320px; max-height: 220px; overflow-y: auto; background: #1f2733; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.5); padding: 4px; direction: ltr; text-align: left; font-family: "Cascadia Code", Consolas, monospace; font-size: 13px; }
+.ac-item { padding: 5px 10px; border-radius: 6px; cursor: pointer; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-item.active { background: var(--accent); color: #04160a; }
+.ac-item .ac-kind { float: right; color: var(--muted); font-size: 11px; margin-inline-start: 12px; }
+.ac-item.active .ac-kind { color: #04160a; }
 input[type="password"] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; direction: ltr; text-align: left; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
 .card h2 { margin: 0 0 12px; font-size: 16px; }

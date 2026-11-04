@@ -151,11 +151,13 @@
         <section class="card acc">
           <button class="acc-head" data-acc="acc-css"><span id="accCssLabel">CSS سفارشی</span><span class="acc-arrow">▾</span></button>
           <div class="acc-body" id="acc-css" hidden>
-            <div class="editor"><pre id="cssHi" aria-hidden="true"><code></code></pre><textarea id="cssTa" spellcheck="false" rows="8" placeholder=".msg { ... }"></textarea></div>
+            <div class="editor"><div class="editor-gutter" aria-hidden="true"><div id="cssGutterInner">1</div></div><pre id="cssHi" aria-hidden="true"><code></code></pre><textarea id="cssTa" spellcheck="false" rows="8" placeholder=".msg { ... }"></textarea><div class="ac-popup" id="cssAcPopup" hidden></div></div>
             <div class="row" style="margin-top:10px">
               <button id="cssSampleBtn" class="secondary">CSS نمونه</button>
+              <button id="cssFormatBtn" class="secondary">مرتب‌سازی</button>
               <button id="cssDocsBtn" class="secondary">راهنمای کلاس‌ها</button>
             </div>
+            <p id="cssHint" class="muted">Ctrl+Space پیشنهاد هوشمند می‌دهد؛ Tab دو فاصله می‌گذارد؛ براکت‌ها خودکار بسته می‌شوند.</p>
             <div id="cssDocs" class="muted" hidden>
               <p>کلاس‌های اورلی چت: <code>.msg</code> (یک پیام)، <code>.msg .user</code> (نام)، <code>.msg .badge</code> (بج؛ نوع‌ها: broadcaster moderator vip subscriber founder og verified staff sub_gifter)، <code>.msg .badge-img</code> (بج تصویری)، <code>.msg .emote</code> (ایموت)، <code>#pinned</code> (باکس پین)، <code>#chatStatus</code> (خط وضعیت).</p>
               <p>کلاس‌های Goal: <code>#goal .title</code>، <code>#goal .values</code>، <code>#goal .bar</code>، <code>#goal .fill</code>، <code>#goalError</code>.</p>
@@ -198,13 +200,17 @@
             <button id="updateBtn">بررسی به‌روزرسانی</button>
             <span id="updateStatus" class="muted"></span>
           </div>
-          <p id="versionNote" class="muted">نسخه‌ی ۰٫۲٫۰</p>
+          <p id="trayNote" class="muted">بستن پنجره (×) برنامه را به سینی سیستم (tray) می‌برد و سرور اورلی در پس‌زمینه همچنان کار می‌کند؛ با کلیک روی آیکن tray برمی‌گردد.</p>
+          <div class="row" style="margin-top:10px">
+            <button id="quitBtn" class="secondary">خروج کامل از برنامه</button>
+          </div>
+          <p id="versionNote" class="muted">نسخه‌ی ۰٫۲٫۱</p>
         </section>
         <section class="card about">
           <img src="./assets/logo.png" alt="ReChat logo" />
           <div>
             <h2 id="aboutTitle" style="margin:0 0 6px">درباره‌ی ReChat</h2>
-            <p id="aboutText" class="muted" style="margin:0">نسخه‌ی ۰٫۲٫۰. چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.</p>
+            <p id="aboutText" class="muted" style="margin:0">نسخه‌ی ۰٫۲٫۱. چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.</p>
             <p id="aboutLicense" class="muted" style="margin:6px 0 0">لایسنس: دوگانه‌ی MIT/Apache-2.0 — © 2026 Taha Arefi. متن کامل لایسنس‌ها همراه نصب‌کننده است.</p>
           </div>
         </section>

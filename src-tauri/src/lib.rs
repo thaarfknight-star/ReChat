@@ -16,6 +16,8 @@ use goal::{GoalHub, GoalStatus};
 use kick::{ChatHub, ChatStatus, Filters};
 use kick_auth::{KickAuthState, KickOauthStatus};
 use theme::{Theme, ThemeStore, Themes};
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 
 /// Resolve the frontend dist dir: packaged resource dir first, then
@@ -262,6 +264,15 @@ async fn auto_connect_kick(
     auth.auto_connect(hub.inner().clone()).await
 }
 
+// ---------- System tray (M8.1) ----------
+
+#[tauri::command]
+async fn quit_app(app: tauri::AppHandle) -> Result<(), String> {
+    app.exit(0);
+    #[allow(unreachable_code)]
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -286,7 +297,39 @@ pub fn run() {
                 goal_hub.set_emitter(handle).await;
                 server::run(dist, hub, goal_hub, store, auth).await;
             });
+            // Tray icon (M8.1): closing the window hides to tray so
+            // the overlay server keeps running in the background.
+            // The icon lives in the runtime once built (no Drop
+            // removal in tauri 2.12), so the handle need not be kept.
+            if let Some(icon) = app.default_window_icon() {
+                let show = MenuItemBuilder::with_id("show", "نمایش ReChat").build(app)?;
+                let quit = MenuItemBuilder::with_id("quit", "خروج").build(app)?;
+                let menu = MenuBuilder::new(app).items(&[&show, &quit]).build()?;
+                let _tray = TrayIconBuilder::new()
+                    .icon(icon.clone())
+                    .menu(&menu)
+                    .tooltip("ReChat")
+                    .on_menu_event(|app, event| match event.id.as_ref() {
+                        "show" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                        "quit" => app.exit(0),
+                        _ => {}
+                    })
+                    .build(app)?;
+            }
             Ok(())
+        })
+        // The X button hides to tray instead of quitting; full quit
+        // comes from the tray menu or the in-app Quit button.
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let _ = window.hide();
+                api.prevent_close();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             connect_chat,
@@ -310,7 +353,8 @@ pub fn run() {
             save_kick_oauth_config,
             start_kick_oauth,
             disconnect_kick_oauth,
-            auto_connect_kick
+            auto_connect_kick,
+            quit_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running ReChat");

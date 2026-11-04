@@ -60,6 +60,8 @@ const dict: Record<Lang, Record<string, string>> = {
     accCss: "CSS سفارشی",
     presetNote: "با زدن هر تم، رنگ‌ها و CSS سفارشی همین پروفایل جایگزین می‌شود؛ پیش‌نمایش سمت راست همان لحظه عوض می‌شود.",
     cssSample: "CSS نمونه",
+    cssFormat: "مرتب‌سازی",
+    cssHint: "Ctrl+Space پیشنهاد هوشمند می‌دهد؛ Tab دو فاصله می‌گذارد؛ براکت‌ها خودکار بسته می‌شوند.",
     cssDocs: "راهنمای کلاس‌ها",
     prevChatLabel: "پیش‌نمایش چت",
     prevGoalLabel: "پیش‌نمایش Goal",
@@ -89,11 +91,16 @@ const dict: Record<Lang, Record<string, string>> = {
     settingsTitle: "تنظیمات برنامه",
     langLabel: "زبان برنامه",
     autoUpdateLabel: "بررسی خودکار به‌روزرسانی هنگام اجرای برنامه",
-    versionNote: "نسخه‌ی ۰٫۲٫۰",
+    versionNote: "نسخه‌ی ۰٫۲٫۱",
     aboutTitle: "درباره‌ی ReChat",
-    aboutText: "نسخه‌ی ۰٫۲٫۰ (M8 — چیدمان تازه + اتصال خودکار Kick + برند نصب‌کننده). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    aboutText: "نسخه‌ی ۰٫۲٫۱ (M8.1 — ادیتور CSS هوشمند + سینی سیستم). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
     aboutLicense: "لایسنس: دوگانه‌ی MIT/Apache-2.0 — © 2026 Taha Arefi. متن کامل لایسنس‌ها همراه نصب‌کننده است.",
     updateBtn: "بررسی به‌روزرسانی",
+    updateConfirm: "نسخه‌ی تازه‌ی {v} آمده است. نصب شود؟",
+    updateDownloading: "در حال دانلود آپدیت…",
+    updateInstalled: "آپدیت نصب شد؛ برنامه در حال راه‌اندازی دوباره است…",
+    trayNote: "بستن پنجره (×) برنامه را به سینی سیستم (tray) می‌برد و سرور اورلی در پس‌زمینه همچنان کار می‌کند؛ با کلیک روی آیکن tray برمی‌گردد.",
+    quitApp: "خروج کامل از برنامه",
     updateChecking: "در حال بررسی…",
     updateLatest: "نسخه به‌روز است.",
     updateFailed: "بررسی ناموفق بود؛ بعداً دوباره بزن.",
@@ -154,6 +161,8 @@ const dict: Record<Lang, Record<string, string>> = {
     accCss: "Custom CSS",
     presetNote: "Applying a theme replaces this profile's colors and custom CSS; the preview on the right updates instantly.",
     cssSample: "Sample CSS",
+    cssFormat: "Format",
+    cssHint: "Ctrl+Space shows smart suggestions; Tab inserts two spaces; brackets auto-close.",
     cssDocs: "Class guide",
     prevChatLabel: "Chat preview",
     prevGoalLabel: "Goal preview",
@@ -183,11 +192,16 @@ const dict: Record<Lang, Record<string, string>> = {
     settingsTitle: "App settings",
     langLabel: "App language",
     autoUpdateLabel: "Check for updates automatically on startup",
-    versionNote: "Version 0.2.0",
+    versionNote: "Version 0.2.1",
     aboutTitle: "About ReChat",
-    aboutText: "Version 0.2.0 (M8 — new layout + Kick auto-connect + installer branding). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    aboutText: "Version 0.2.1 (M8.1 — smart CSS editor + system tray). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
     aboutLicense: "License: dual MIT/Apache-2.0 — © 2026 Taha Arefi. Full license texts ship with the installer.",
     updateBtn: "Check for updates",
+    updateConfirm: "A new version {v} is available. Install it?",
+    updateDownloading: "Downloading update…",
+    updateInstalled: "Update installed; restarting…",
+    trayNote: "Closing the window (×) sends the app to the system tray and the overlay server keeps running in the background; click the tray icon to bring it back.",
+    quitApp: "Quit app completely",
     updateChecking: "Checking…",
     updateLatest: "You are up to date.",
     updateFailed: "Check failed; try again later.",
@@ -348,6 +362,8 @@ function applyLang(): void {
   ($("accCssLabel").textContent = t.accCss);
   ($("presetNote").textContent = t.presetNote);
   ($("cssSampleBtn").textContent = t.cssSample);
+  ($("cssFormatBtn").textContent = t.cssFormat);
+  ($("cssHint").textContent = t.cssHint);
   ($("cssDocsBtn").textContent = t.cssDocs);
   ($("prevChatLabel").textContent = t.prevChatLabel);
   ($("prevGoalLabel").textContent = t.prevGoalLabel);
@@ -375,6 +391,8 @@ function applyLang(): void {
   ($("aboutText").textContent = t.aboutText);
   ($("aboutLicense").textContent = t.aboutLicense);
   ($("updateBtn").textContent = t.updateBtn);
+  ($("trayNote").textContent = t.trayNote);
+  ($("quitBtn").textContent = t.quitApp);
   channelInput.placeholder = lang === "fa" ? "kick.com/tahaa" : "kick.com/username";
   goalInput.placeholder = "https://…";
   ($("newProfileName") as HTMLInputElement).placeholder =
@@ -784,6 +802,7 @@ function loadThemeIntoControls(t: Theme): void {
   $<HTMLInputElement>("thGoalValues").checked = t.show_goal_values;
   cssTa.value = t.custom_css;
   syncCssHighlight();
+  syncCssGutter();
 }
 
 function renderProfileSelect(): void {
@@ -838,15 +857,303 @@ function syncCssHighlight(): void {
   cssHiCode.innerHTML = highlightCss(cssTa.value) + "\n";
 }
 
-cssTa.addEventListener("input", () => {
+const cssGutterInner = document.getElementById("cssGutterInner") as HTMLElement;
+const cssAcPopup = document.getElementById("cssAcPopup") as HTMLDivElement;
+
+function syncCssGutter(): void {
+  const n = cssTa.value.split("\n").length;
+  cssGutterInner.textContent = Array.from({ length: n }, (_, i) => String(i + 1)).join("\n");
+  cssGutterInner.style.transform = `translateY(${-cssTa.scrollTop}px)`;
+}
+
+function afterCssEdit(): void {
   syncCssHighlight();
+  syncCssGutter();
   updatePreview();
   scheduleThemeSave();
+}
+
+cssTa.addEventListener("input", (e) => {
+  afterCssEdit();
+  const data = (e as InputEvent).data;
+  if (data && /[a-zA-Z0-9_#\-.%]/.test(data)) showAutocomplete(false);
 });
 cssTa.addEventListener("scroll", () => {
   cssHiPre.scrollTop = cssTa.scrollTop;
   cssHiPre.scrollLeft = cssTa.scrollLeft;
+  cssGutterInner.style.transform = `translateY(${-cssTa.scrollTop}px)`;
 });
+
+// ---------- VSCode-style autocomplete (M8.1) ----------
+
+type AcItem = { text: string; kind: string };
+const CSS_SELECTORS: AcItem[] = [
+  { text: ".msg", kind: "selector" }, { text: ".msg .user", kind: "selector" },
+  { text: ".msg .badge", kind: "selector" }, { text: ".msg .badge-img", kind: "selector" },
+  { text: ".msg .emote", kind: "selector" }, { text: "#pinned", kind: "selector" },
+  { text: "#pinned .msg", kind: "selector" }, { text: "#messages", kind: "selector" },
+  { text: "#chatStatus", kind: "selector" }, { text: "#goal", kind: "selector" },
+  { text: "#goal .title", kind: "selector" }, { text: "#goal .values", kind: "selector" },
+  { text: "#goal .bar", kind: "selector" }, { text: "#goal .fill", kind: "selector" },
+  { text: "#goalError", kind: "selector" },
+];
+const CSS_VARS: AcItem[] = [
+  "--chat-font-size", "--chat-bg-opacity", "--chat-text", "--chat-radius", "--chat-gap",
+  "--goal-title-size", "--goal-bar-h", "--goal-c1", "--goal-c2",
+].map((v) => ({ text: v, kind: "var" }));
+const CSS_PROPS: AcItem[] = [
+  "color", "background", "background-color", "background-image", "border", "border-radius",
+  "padding", "margin", "font-size", "font-weight", "font-family", "display", "flex-direction",
+  "gap", "width", "height", "max-width", "min-width", "opacity", "box-shadow", "text-shadow",
+  "animation", "transition", "transform", "overflow", "text-align", "line-height",
+  "letter-spacing", "word-spacing", "white-space", "cursor", "position", "top", "left",
+  "right", "bottom", "z-index", "justify-content", "align-items", "flex-wrap",
+  "grid-template-columns", "object-fit", "filter", "backdrop-filter", "outline",
+  "visibility", "content", "list-style", "text-decoration", "text-transform",
+  "vertical-align", "float", "clear", "clip-path", "resize", "user-select", "pointer-events",
+].map((p) => ({ text: p, kind: "prop" }));
+const CSS_VALUES: Record<string, string[]> = {
+  display: ["block", "inline-block", "flex", "grid", "none"],
+  position: ["static", "relative", "absolute", "fixed", "sticky"],
+  "font-weight": ["400", "700", "800", "bold"],
+  "text-align": ["left", "right", "center"],
+  overflow: ["hidden", "visible", "auto", "scroll"],
+  "flex-direction": ["row", "column"],
+  "justify-content": ["flex-start", "center", "space-between"],
+  "align-items": ["flex-start", "center", "stretch"],
+  "white-space": ["normal", "nowrap", "pre-wrap"],
+  visibility: ["visible", "hidden"],
+  color: ["#ffffff", "#000000", "transparent", "red", "orange", "gold", "lime", "cyan"],
+  "background-color": ["#000000", "#ffffff", "transparent", "rgba(0,0,0,0.5)"],
+};
+const GENERIC_VALUES = ["inherit", "initial", "unset", "none", "auto", "0"];
+
+let acItems: AcItem[] = [];
+let acActive = 0;
+let acOpen = false;
+
+function cssContext(): "selector" | "property" | "value" | "var" {
+  const before = cssTa.value.slice(0, cssTa.selectionStart);
+  const lastVar = before.lastIndexOf("var(");
+  if (lastVar >= 0 && !before.slice(lastVar).includes(")")) return "var";
+  const lastOpen = before.lastIndexOf("{");
+  const lastClose = before.lastIndexOf("}");
+  if (lastOpen === -1 || lastClose > lastOpen) return "selector";
+  const body = before.slice(lastOpen + 1);
+  const lastSemi = body.lastIndexOf(";");
+  const lastColon = body.lastIndexOf(":");
+  if (lastColon > lastSemi) return "value";
+  return "property";
+}
+
+function currentWord(): { word: string; start: number } {
+  const pos = cssTa.selectionStart;
+  let start = pos;
+  while (start > 0 && /[a-zA-Z0-9_\-.#%]/.test(cssTa.value[start - 1])) start--;
+  return { word: cssTa.value.slice(start, pos), start };
+}
+
+function caretPos(): { x: number; y: number; lineH: number } {
+  const cs = getComputedStyle(cssTa);
+  const mirror = document.createElement("div");
+  mirror.style.cssText = `position:absolute;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;box-sizing:${cs.boxSizing};font:${cs.font};line-height:${cs.lineHeight};padding:${cs.padding};width:${cssTa.clientWidth}px;`;
+  mirror.textContent = cssTa.value.slice(0, cssTa.selectionStart);
+  const span = document.createElement("span");
+  span.textContent = "\u200b";
+  mirror.appendChild(span);
+  document.body.appendChild(mirror);
+  const r = span.getBoundingClientRect();
+  const ta = cssTa.getBoundingClientRect();
+  document.body.removeChild(mirror);
+  return { x: r.left - ta.left, y: r.top - ta.top, lineH: r.height || 21 };
+}
+
+function showAutocomplete(force: boolean): void {
+  const ctx = cssContext();
+  const { word } = currentWord();
+  let pool: AcItem[] = [];
+  if (ctx === "selector") pool = CSS_SELECTORS;
+  else if (ctx === "var") pool = CSS_VARS;
+  else if (ctx === "property") pool = CSS_PROPS;
+  else {
+    const before = cssTa.value.slice(0, cssTa.selectionStart);
+    const m = before.match(/([a-zA-Z-]+)\s*:\s*[^;{}]*$/);
+    const vals = (m ? CSS_VALUES[m[1]] : undefined) ?? GENERIC_VALUES;
+    pool = vals.map((v) => ({ text: v, kind: "value" }));
+  }
+  const q = word.toLowerCase();
+  const filtered = (force || q.length >= 1)
+    ? pool.filter((it) => it.text.toLowerCase().startsWith(q) || (q.length >= 2 && it.text.toLowerCase().includes(q)))
+    : [];
+  if (filtered.length === 0) { closeAutocomplete(); return; }
+  acItems = filtered.slice(0, 12);
+  acActive = 0;
+  acOpen = true;
+  cssAcPopup.innerHTML = "";
+  acItems.forEach((it, i) => {
+    const div = document.createElement("div");
+    div.className = "ac-item" + (i === 0 ? " active" : "");
+    div.innerHTML = `<span class="ac-kind">${it.kind}</span>${it.text}`;
+    div.addEventListener("mousedown", (e) => { e.preventDefault(); acceptSuggestion(i); });
+    cssAcPopup.appendChild(div);
+  });
+  const { x, y, lineH } = caretPos();
+  const ed = cssTa.parentElement as HTMLElement;
+  cssAcPopup.hidden = false;
+  const pw = Math.min(320, ed.clientWidth - 16);
+  cssAcPopup.style.width = pw + "px";
+  cssAcPopup.style.left = Math.max(4, Math.min(x, ed.clientWidth - pw - 4)) + "px";
+  const ph = Math.min(220, acItems.length * 30 + 8);
+  cssAcPopup.style.top = (y + lineH + ph > ed.clientHeight ? Math.max(4, y - ph) : y + lineH) + "px";
+}
+
+function closeAutocomplete(): void {
+  acOpen = false;
+  cssAcPopup.hidden = true;
+}
+
+function renderAcActive(): void {
+  [...cssAcPopup.children].forEach((el, i) => el.classList.toggle("active", i === acActive));
+  const active = cssAcPopup.children[acActive] as HTMLElement | undefined;
+  active?.scrollIntoView({ block: "nearest" });
+}
+
+function acceptSuggestion(i: number): void {
+  const item = acItems[i];
+  if (!item) return;
+  const { word, start } = currentWord();
+  const ctx = cssContext();
+  const end = cssTa.selectionStart;
+  const val = cssTa.value;
+  let insert = item.text;
+  if (ctx === "property") insert += ": ";
+  cssTa.value = val.slice(0, start) + insert + val.slice(end);
+  const caret = start + insert.length;
+  cssTa.selectionStart = cssTa.selectionEnd = caret;
+  closeAutocomplete();
+  afterCssEdit();
+  if (ctx === "property") showAutocomplete(true);
+  void word;
+}
+
+cssTa.addEventListener("keydown", (e) => {
+  if (acOpen && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    e.preventDefault();
+    acActive = (acActive + (e.key === "ArrowDown" ? 1 : -1) + acItems.length) % acItems.length;
+    renderAcActive();
+    return;
+  }
+  if (acOpen && (e.key === "Enter" || e.key === "Tab")) {
+    e.preventDefault();
+    acceptSuggestion(acActive);
+    return;
+  }
+  if (e.key === "Escape" && acOpen) { closeAutocomplete(); return; }
+  if (e.key === " " && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    showAutocomplete(true);
+    return;
+  }
+  const pairs: Record<string, string> = { "{": "}", "(": ")", "[": "]", '"': '"', "'": "'" };
+  if (!e.ctrlKey && !e.metaKey && pairs[e.key]) {
+    const s = cssTa.selectionStart;
+    const next = cssTa.value[s];
+    if ((e.key === '"' || e.key === "'") && next && /[\w]/.test(next)) return;
+    e.preventDefault();
+    const val = cssTa.value;
+    cssTa.value = val.slice(0, s) + e.key + pairs[e.key] + val.slice(cssTa.selectionEnd);
+    cssTa.selectionStart = cssTa.selectionEnd = s + 1;
+    afterCssEdit();
+    return;
+  }
+  if (!e.ctrlKey && !e.metaKey && (e.key === "}" || e.key === ")" || e.key === "]")) {
+    if (cssTa.value[cssTa.selectionStart] === e.key) {
+      e.preventDefault();
+      cssTa.selectionStart = cssTa.selectionEnd = cssTa.selectionStart + 1;
+    }
+    return;
+  }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const val = cssTa.value;
+    const s = cssTa.selectionStart;
+    const en = cssTa.selectionEnd;
+    if (s !== en && val.slice(s, en).includes("\n")) {
+      const startLine = val.lastIndexOf("\n", s - 1) + 1;
+      const endIdx = val.indexOf("\n", en);
+      const end = endIdx === -1 ? val.length : endIdx;
+      const block = val.slice(startLine, end);
+      const changed = block.split("\n").map((l) => e.shiftKey ? l.replace(/^  /, "") : "  " + l).join("\n");
+      cssTa.value = val.slice(0, startLine) + changed + val.slice(end);
+      cssTa.selectionStart = startLine;
+      cssTa.selectionEnd = startLine + changed.length;
+    } else {
+      cssTa.value = val.slice(0, s) + "  " + val.slice(en);
+      cssTa.selectionStart = cssTa.selectionEnd = s + 2;
+    }
+    afterCssEdit();
+    return;
+  }
+});
+cssTa.addEventListener("blur", () => setTimeout(closeAutocomplete, 120));
+
+// ---------- CSS formatter (M8.1) ----------
+
+function formatCss(src: string): string {
+  let out = "";
+  let indent = 0;
+  let i = 0;
+  let inStr: string | null = null;
+  let inCom = false;
+  let inUrl = false;
+  const pad = () => "  ".repeat(indent);
+  while (i < src.length) {
+    const ch = src[i];
+    const nx = src[i + 1] ?? "";
+    if (inCom) {
+      out += ch;
+      if (ch === "*" && nx === "/") { out += "/"; i += 2; inCom = false; out += "\n" + pad(); continue; }
+      i++; continue;
+    }
+    if (inStr) {
+      out += ch;
+      if (ch === "\\") { out += nx; i += 2; continue; }
+      if (ch === inStr) inStr = null;
+      i++; continue;
+    }
+    if (ch === "/" && nx === "*") { inCom = true; out += "/*"; i += 2; continue; }
+    if (ch === '"' || ch === "'") { inStr = ch; out += ch; i++; continue; }
+    if (ch === "(") {
+      if (src.slice(Math.max(0, i - 3), i) === "url") inUrl = true;
+      out += ch; i++; continue;
+    }
+    if (ch === ")") { inUrl = false; out += ch; i++; continue; }
+    if (ch === "{") {
+      out = out.replace(/[\s]+$/, "") + " {\n";
+      indent++;
+      out += pad();
+      i++; continue;
+    }
+    if (ch === "}") {
+      indent = Math.max(0, indent - 1);
+      out = out.replace(/[\s]+$/, "") + "\n" + pad() + "}\n" + pad();
+      i++; continue;
+    }
+    if (ch === ";") { out += ";\n" + pad(); i++; continue; }
+    if (ch === ":") {
+      if (inUrl || nx === "/") { out += ":"; i++; continue; }
+      const inDecl = indent > 0;
+      out += inDecl ? ": " : ":";
+      i++;
+      if (inDecl && src[i] === " ") i++;
+      continue;
+    }
+    if (ch === ",") { out += ","; if (nx !== " " && nx !== "\n") out += " "; i++; continue; }
+    if (ch === "\n" || ch === "\r") { i++; continue; }
+    out += ch; i++;
+  }
+  return out.replace(/\n{3,}/g, "\n\n").replace(/[ \t]+\n/g, "\n").replace(/^\s+/, "").replace(/\s+$/, "\n");
+}
 
 let themeSaveTimer: ReturnType<typeof setTimeout> | undefined;
 function scheduleThemeSave(): void {
@@ -1022,9 +1329,11 @@ $("copyGoalProfileBtn").addEventListener("click", (e) => {
 $("cssSampleBtn").addEventListener("click", () => {
   const sample = `.msg {\n  border: 2px solid #22c55e;\n  font-weight: 700;\n}\n.msg .user {\n  font-size: 20px;\n}\n`;
   cssTa.value = cssTa.value ? cssTa.value + "\n" + sample : sample;
-  syncCssHighlight();
-  updatePreview();
-  scheduleThemeSave();
+  afterCssEdit();
+});
+$("cssFormatBtn").addEventListener("click", () => {
+  cssTa.value = formatCss(cssTa.value);
+  afterCssEdit();
 });
 $("cssDocsBtn").addEventListener("click", () => {
   const docs = document.getElementById("cssDocs") as HTMLDivElement;
@@ -1054,9 +1363,13 @@ autoUpdateChk.addEventListener("change", () => {
   localStorage.setItem("rechat-auto-update", autoUpdateChk.checked ? "1" : "0");
 });
 
-// Built-in updater (M7): the plugin's own dialog (dialog: true in
-// tauri.conf.json) asks the user and shows the release notes; this
-// code only triggers the check and reports the no-update/failure cases.
+// Built-in updater (M7 + M8.1 fix): check() only RETURNS the update —
+// it never shows a dialog and never installs anything (the config
+// option dialog:true only adds UI *during* installation). The M7 code
+// dropped the returned Update object, so every available update was
+// silently lost. Now: ask the user with the changelog notes, then
+// downloadAndInstall (on Windows this exits the app and the installer
+// restarts it, restart_after_install defaults to true).
 async function runUpdateCheck(manual: boolean): Promise<void> {
   if (!isTauri) return;
   const status = $("updateStatus");
@@ -1064,14 +1377,35 @@ async function runUpdateCheck(manual: boolean): Promise<void> {
   status.textContent = t.updateChecking;
   try {
     const update = await checkUpdate();
-    // With dialog enabled, an available update already showed the
-    // plugin dialog; null means already up to date.
-    status.textContent = update ? "" : t.updateLatest;
-  } catch {
-    status.textContent = manual ? t.updateFailed : "";
+    if (!update) { status.textContent = t.updateLatest; return; }
+    const notes = update.body ? "\n\n" + update.body : "";
+    const ok = window.confirm(t.updateConfirm.replace("{v}", update.version) + notes);
+    if (!ok) { status.textContent = ""; return; }
+    let total = 0;
+    let done = 0;
+    await update.downloadAndInstall((ev) => {
+      if (ev.event === "Started") {
+        total = (ev.data as { contentLength?: number }).contentLength ?? 0;
+        status.textContent = t.updateDownloading;
+      } else if (ev.event === "Progress") {
+        done += (ev.data as { chunkLength: number }).chunkLength;
+        status.textContent = total > 0
+          ? `${t.updateDownloading} ${Math.round((done / total) * 100)}٪`
+          : t.updateDownloading;
+      } else if (ev.event === "Finished") {
+        status.textContent = t.updateInstalled;
+      }
+    });
+    status.textContent = t.updateInstalled;
+  } catch (err) {
+    status.textContent = manual ? `${t.updateFailed} (${String(err)})` : "";
   }
 }
 $("updateBtn").addEventListener("click", () => void runUpdateCheck(true));
+$("quitBtn").addEventListener("click", () => {
+  if (!isTauri) return;
+  void invoke("quit_app").catch(() => undefined);
+});
 // Auto-check once at startup (silent unless an update dialog appears),
 // unless the user turned it off in App settings.
 if (autoUpdateChk.checked) void runUpdateCheck(false);
