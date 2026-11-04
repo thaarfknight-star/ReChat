@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Capability for the main window: core APIs and the updater plugin.","local":true,"windows":["main"],"permissions":["core:default","updater:default"]}}

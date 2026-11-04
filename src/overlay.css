@@ -1,0 +1,37 @@
+/* Overlay pages: fully transparent, light, smooth. Served by the
+   Rust localhost server and added in Meld as a Browser Source. */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent !important; overflow: hidden; }
+body { font-family: Tahoma, "Segoe UI", sans-serif; color: var(--chat-text, #fff); }
+
+/* ---- chat ---- */
+#chatStatus { font-size: 12px; color: rgba(255,255,255,.65); text-shadow: 0 1px 4px rgba(0,0,0,.8); padding: 8px 12px 0; }
+#pinned { display: flex; flex-direction: column; gap: var(--chat-gap, 8px); padding: 12px 12px 0; }
+#pinned:empty { display: none; }
+#pinned .msg { border: 1px solid rgba(250, 204, 21, .6); }
+#messages { display: flex; flex-direction: column; gap: var(--chat-gap, 8px); padding: 12px; }
+.msg { background: rgb(0 0 0 / var(--chat-bg-opacity, 0.55)); border-radius: var(--chat-radius, 10px); padding: 8px 12px;
+  font-size: var(--chat-font-size, 18px); line-height: 1.7; animation: msg-in 0.35s ease; }
+@keyframes msg-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.msg .user { font-weight: 800; }
+.msg .badge { display: inline-block; font-size: 11px; background: #e11d48; border-radius: 4px; padding: 1px 6px; margin-inline-end: 6px; vertical-align: middle; }
+.msg .badge.mod, .msg .badge.moderator { background: #16a34a; }
+.msg .badge.vip { background: #9333ea; }
+.msg .badge.broadcaster { background: #e11d48; }
+.msg .badge.subscriber { background: #2563eb; }
+.msg .badge.founder { background: #ca8a04; }
+.msg .badge.og { background: #0ea5e9; }
+.msg .badge.verified { background: #06b6d4; }
+.msg .badge.staff { background: #f97316; }
+.msg .badge.sub_gifter { background: #ec4899; }
+.msg .badge-img { height: 1.2em; vertical-align: middle; margin-inline-end: 4px; }
+.msg .emote { height: 1.5em; vertical-align: middle; }
+
+/* ---- goal ---- */
+#goal { padding: 16px; }
+#goal .title { font-size: var(--goal-title-size, 20px); font-weight: 800; margin-bottom: 4px; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+#goal .values { font-size: 16px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+#goal .bar { height: var(--goal-bar-h, 22px); background: rgba(0,0,0,.55); border-radius: 999px; overflow: hidden; }
+#goal .fill { height: 100%; background: linear-gradient(90deg, var(--goal-c1, #16a34a), var(--goal-c2, #4ade80)); border-radius: 999px; transition: width 0.8s ease; }
+#goalError { font-size: 13px; color: #fca5a5; text-shadow: 0 1px 4px rgba(0,0,0,.8); margin-top: 8px; }
+#goalError:empty { display: none; }

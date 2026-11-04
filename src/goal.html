@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReChat Goal Overlay</title>
+  <link rel="stylesheet" href="./overlay.css" />
+</head>
+<body>
+  <div id="goal">
+    <div class="title">هدف فالوور</div>
+    <div class="values"><span id="current">۱۴۵</span> از <span id="target">۳۰۰</span> <span id="unit"></span> — <span id="pct">۴۸٪</span></div>
+    <div class="bar"><div class="fill" id="fill" style="width:0%"></div></div>
+    <div id="goalError"></div>
+  </div>
+  <script type="module" src="./goal.ts"></script>
+</body>
+</html>

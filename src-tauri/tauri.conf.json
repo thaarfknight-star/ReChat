@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ReChat",
+  "version": "0.1.0",
+  "identifier": "ir.rechat.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ReChat",
+        "width": 960,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 540
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "../dist/**/*",
+      "../LICENSE",
+      "../LICENSE-MIT",
+      "../LICENSE-APACHE",
+      "../COPYRIGHT",
+      "../THIRD-PARTY-NOTICES.md"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQyMzMyQUUwQ0E2REZBMzIKUldReSttM0s0Q296MGljR2ZaT3FGK1FjWE1QSEtwdis3WGk3am5FWjdJTk9xMU40WFZ0L1BGeWMK",
+      "endpoints": [
+        "https://github.com/thaarfknight-star/ReChat/releases/download/update-feed/update-feed.json"
+      ],
+      "dialog": true,
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
