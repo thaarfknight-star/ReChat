@@ -28,21 +28,48 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// Mixed Persian/English text (M9): a Latin run inside an RTL message must
+// keep its own punctuation (e.g. the "!" at the end of "great stream!").
+// So Latin runs are wrapped in <bdi dir="ltr">, segment by segment, on the
+// raw text (escaping each segment separately so entities never split).
+const LATIN_RUN = /[(["'«“]*[A-Za-z0-9](?:[A-Za-z0-9\s.,!?'":;()\-_@#%&*+=/\\]*[A-Za-z0-9!?.])?/g;
+function segmentLatin(raw: string): string {
+  let out = "";
+  let last = 0;
+  for (const m of raw.matchAll(LATIN_RUN)) {
+    const idx = m.index ?? 0;
+    out += esc(raw.slice(last, idx));
+    out += `<bdi dir="ltr">${esc(m[0])}</bdi>`;
+    last = idx + m[0].length;
+  }
+  out += esc(raw.slice(last));
+  return out;
+}
+
 // Kick emote syntax: [emote:ID:NAME] -> artwork image (alt = name,
-// so a missing image still reads as the emote name).
+// so a missing image still reads as the emote name). Emote tokens are
+// split out BEFORE segmentation so a <bdi> never lands inside one.
 function renderContent(content: string): string {
-  return esc(content).replace(
-    /\[emote:(\d+):([^\]]+)\]/g,
-    (_m, id, name) =>
-      `<img class="emote" src="https://files.kick.com/emotes/${id}/fullsize" alt="${esc(name)}" title="${esc(name)}" />`,
-  );
+  return content
+    .split(/(\[emote:\d+:[^\]]+\])/g)
+    .map((part) => {
+      const em = part.match(/^\[emote:(\d+):([^\]]+)\]$/);
+      if (em) {
+        return `<img class="emote" src="https://files.kick.com/emotes/${em[1]}/fullsize" alt="${esc(em[2])}" title="${esc(em[2])}" />`;
+      }
+      return segmentLatin(part);
+    })
+    .join("");
 }
 
 // Overlay language comes from the ?lang= param the settings window
-// appends to the overlay link (M8 bilingual overlays).
+// appends to the overlay link (M8 bilingual overlays). Chat direction
+// (M9) rides the same link: ?dir=rtl|ltr|auto (auto = per-message).
 const overlayLang = new URLSearchParams(location.search).get("lang") === "en" ? "en" : "fa";
 document.documentElement.lang = overlayLang;
-document.documentElement.dir = overlayLang === "fa" ? "rtl" : "ltr";
+const chatDirParam = new URLSearchParams(location.search).get("dir");
+const forcedDir = chatDirParam === "rtl" ? "rtl" : chatDirParam === "ltr" ? "ltr" : null;
+document.documentElement.dir = forcedDir ?? (overlayLang === "fa" ? "rtl" : "ltr");
 
 const badgeLabel: Record<string, string> = overlayLang === "fa"
   ? {
@@ -79,9 +106,11 @@ function badgeHtml(b: Badge): string {
 function msgEl(m: Msg): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "msg";
-  el.dir = "auto"; // first strong char decides: Persian RTL, English LTR
+  // Auto: first strong char decides (Persian RTL, English LTR). A forced
+  // direction from ?dir= pins every message to that direction instead.
+  el.dir = forcedDir ?? "auto";
   el.dataset.id = m.id;
-  el.innerHTML = `${(m.badges ?? []).map(badgeHtml).join("")}<span class="user" style="color:${esc(m.color || "#ffffff")}">${esc(m.username)}</span>: ${renderContent(m.content)}`;
+  el.innerHTML = `${(m.badges ?? []).map(badgeHtml).join("")}<bdi><span class="user" style="color:${esc(m.color || "#ffffff")}">${esc(m.username)}</span></bdi>: ${renderContent(m.content)}`;
   return el;
 }
 
@@ -134,6 +163,8 @@ if (demo) {
     { user: "tahaa", color: "#4ade80", badge: overlayLang === "fa" ? "مدیر" : "Mod", text: overlayLang === "fa" ? "سلام به همه! بازی امشب سولزلایک است" : "Hey everyone! Tonight we play a soulslike" },
     { user: "soul_fan", color: "#58a6ff", text: "this boss fight is insane 🔥" },
     { user: "nightowl", color: "#f472b6", badge: "VIP", text: overlayLang === "fa" ? "چت فارسی و انگلیسی قاطی هم خوب درمیاد، great stream!" : "Persian and English chat mix nicely, great stream!" },
+    { user: "long_reader", color: "#a78bfa", text: overlayLang === "fa" ? "این یک پیام طولانی است برای اینکه ببینیم متن بلند چندخطی چطور می‌شکند و فاصله‌ی خطوط و داخل پیام چقدر خواناست، مخصوصاً وقتی وسطش یک عبارت انگلیسی مثل boss fight هم باشد و آخرش علامت تعجب! " : "This is a long message to check how multi-line text wraps, how line height and padding read, especially with a Persian phrase in the middle like سلام به همه and an exclamation mark at the end!" },
+    { user: "emote_king", color: "#fbbf24", text: overlayLang === "fa" ? "این ایموت‌ها چطور دیده می‌شوند؟ [emote:123:KEKW] [emote:456:Pog]" : "How do these emotes look? [emote:123:KEKW] [emote:456:Pog]" },
   ];
   box.innerHTML = "";
   for (const s of samples) {

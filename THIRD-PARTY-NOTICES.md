@@ -23,9 +23,9 @@ notices must stay in this file.
 
 ## Audit result (2026-11-04, from Cargo.lock + package-lock state)
 
-- Rust crates: 491 — all compatible with MIT/Apache-2.0.
+- Rust crates: 524 — all compatible with MIT/Apache-2.0.
 
-- npm packages: 22 — all permissive (MIT / Apache-2.0 / ISC / BSD-3-Clause).
+- npm packages: 23 — all permissive (MIT / Apache-2.0 / ISC / BSD-3-Clause).
 
 - MPL-2.0 crates (file-level copyleft, compatible with a dual-licensed
   binary; their own license text governs those files): cssparser,
@@ -41,9 +41,12 @@ This list must be regenerated on every release.
   `src-tauri/icons/icon.png`, `src-tauri/icons/icon.ico`): generated
   for this project, © 2026 Taha Arefi — no third-party license
   applies.
-- Fonts: none bundled. The UI uses system fonts (Tahoma / Segoe UI)
-  and the CSS editor uses system monospace fonts (Cascadia Code /
-  Consolas) — nothing to redistribute, nothing to notice.
+- Fonts: Vazirmatn variable font (arabic + latin subsets, OFL-1.1)
+  in `src/assets/fonts/` (files: vazirmatn-arabic-var.woff2,
+  vazirmatn-latin-var.woff2), used by the settings app and both
+  overlays. Source: google/fonts (Vazirmatn by Saber Rastikerdar).
+  The CSS editor still uses system monospace fonts (Cascadia Code /
+  Consolas) — nothing to redistribute there.
 
 ## Rust dependencies (from Cargo.lock)
 
@@ -540,6 +543,39 @@ This list must be regenerated on every release.
 | zip | 9.3.0 | MIT |
 | zlib-rs | 0.6.8 | Zlib |
 | zmij | 1.0.23 | MIT |
+| async-broadcast | 0.7.2 | MIT OR Apache-2.0 |
+| async-channel | 2.5.0 | Apache-2.0 OR MIT |
+| async-executor | 1.14.1 | Apache-2.0 OR MIT |
+| async-io | 2.6.0 | Apache-2.0 OR MIT |
+| async-lock | 3.5.0 | Apache-2.0 OR MIT |
+| async-process | 2.5.0 | Apache-2.0 OR MIT |
+| async-recursion | 1.2.0 | MIT OR Apache-2.0 |
+| async-signal | 0.2.14 | Apache-2.0 OR MIT |
+| async-task | 4.7.1 | Apache-2.0 OR MIT |
+| async-trait | 0.1.92 | MIT OR Apache-2.0 |
+| blocking | 1.7.0 | Apache-2.0 OR MIT |
+| concurrent-queue | 2.5.0 | Apache-2.0 OR MIT |
+| endi | 1.1.1 | MIT |
+| enumflags2 | 0.7.12 | MIT OR Apache-2.0 |
+| enumflags2_derive | 0.7.12 | MIT OR Apache-2.0 |
+| event-listener | 5.4.2 | Apache-2.0 OR MIT |
+| event-listener-strategy | 0.5.4 | Apache-2.0 OR MIT |
+| futures-lite | 2.6.1 | Apache-2.0 OR MIT |
+| hermit-abi | 0.5.3 | MIT OR Apache-2.0 |
+| ordered-stream | 0.2.0 | MIT OR Apache-2.0 |
+| parking | 2.2.1 | Apache-2.0 OR MIT |
+| piper | 0.2.5 | MIT OR Apache-2.0 |
+| polling | 3.11.0 | Apache-2.0 OR MIT |
+| tauri-plugin-opener | 2.7.2 | Apache-2.0 OR MIT |
+| tracing-attributes | 0.1.31 | MIT |
+| uds_windows | 1.2.1 | MIT |
+| zbus | 5.19.0 | MIT |
+| zbus_macros | 5.19.0 | MIT |
+| zbus_names | 4.3.5 | MIT |
+| zcheapstr | 1.2.0 | MIT |
+| zvariant | 5.15.1 | MIT |
+| zvariant_derive | 5.15.1 | MIT |
+| zvariant_utils | 4.2.0 | MIT |
 
 ## npm dependencies (from node_modules)
 
@@ -553,6 +589,7 @@ This list must be regenerated on every release.
 | @tauri-apps/cli-linux-x64-musl | 2.12.4 | Apache-2.0 OR MIT |
 | @tauri-apps/cli | 2.12.4 | Apache-2.0 OR MIT |
 | @tauri-apps/plugin-updater | 2.14.1 | MIT OR Apache-2.0 |
+| @tauri-apps/plugin-opener | 2.7.2 | MIT OR Apache-2.0 |
 | @types/estree | 1.0.10 | MIT |
 | @types/node | 26.6.6 | MIT |
 | esbuild | 0.25.12 | MIT |

@@ -6,6 +6,72 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { check as checkUpdate } from "@tauri-apps/plugin-updater";
+import { openUrl } from "@tauri-apps/plugin-opener";
+
+// ---------- M9 shared helpers: toast, pills, display settings ----------
+
+const toastEl = document.getElementById("toast") as HTMLDivElement;
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
+function showToast(msg: string): void {
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2600);
+}
+
+function setPill(el: HTMLElement, dot: "ok" | "warn" | "bad" | "idle", text: string): void {
+  el.innerHTML = "";
+  const d = document.createElement("span");
+  d.className = `dot ${dot}`;
+  const t = document.createElement("span");
+  t.textContent = text;
+  el.appendChild(d);
+  el.appendChild(t);
+}
+
+// Display-only settings (localStorage; they ride the overlay link as query
+// params so Meld's browser source sees them too — no backend change).
+type DisplaySettings = { chatDir: string; goalDir: string; digits: string; goalUnit: string; goalUnitCustom: string };
+function loadDisplay(): DisplaySettings {
+  try {
+    return {
+      chatDir: "auto", goalDir: "auto", digits: "auto", goalUnit: "auto", goalUnitCustom: "",
+      ...(JSON.parse(localStorage.getItem("rechat-display") ?? "{}") as Partial<DisplaySettings>),
+    };
+  } catch {
+    return { chatDir: "auto", goalDir: "auto", digits: "auto", goalUnit: "auto", goalUnitCustom: "" };
+  }
+}
+let display = loadDisplay();
+function saveDisplay(): void {
+  localStorage.setItem("rechat-display", JSON.stringify(display));
+  refreshOverlayUrls();
+  updatePreview();
+}
+function overlayParams(profile?: string): string {
+  const parts: string[] = [];
+  if (profile && profile !== "default") parts.push(`profile=${encodeURIComponent(profile)}`);
+  parts.push(`lang=${lang}`);
+  if (display.chatDir !== "auto") parts.push(`dir=${display.chatDir}`);
+  if (display.goalDir !== "auto") parts.push(`goald=${display.goalDir}`);
+  if (display.digits !== "auto") parts.push(`digits=${display.digits}`);
+  if (display.goalUnit === "custom" && display.goalUnitCustom.trim()) {
+    parts.push(`unit=${encodeURIComponent(display.goalUnitCustom.trim())}`);
+  }
+  return parts.join("&");
+}
+async function openInBrowser(url: string, btn?: HTMLButtonElement): Promise<void> {
+  if (isTauri) {
+    try {
+      await openUrl(url);
+      return;
+    } catch {
+      if (btn) showToast(dict[lang].openFailed);
+      return;
+    }
+  }
+  window.open(url, "_blank", "noopener");
+}
 
 type Lang = "fa" | "en";
 type ChatState = "idle" | "resolving" | "connecting" | "connected" | "reconnecting" | "error";
@@ -111,6 +177,73 @@ const dict: Record<Lang, Record<string, string>> = {
     connected: "متصل ✓",
     reconnecting: "اتصال دوباره…",
     error: "خطا در اتصال",
+    // ---- M9 ----
+    connTitle: "اتصال کیک",
+    connNote: "یک حالت را انتخاب کن؛ ساده‌ترین حالت «نام کانال» است و بدون هیچ تنظیم اضافه‌ای کار می‌کند.",
+    modeChannel: "نام کانال (ساده)",
+    modeOauth: "ورود با Kick (پیشنهادی)",
+    channelLabelNew: "نام کانال یا لینک کانال",
+    channelHint: "پیام‌های زنده‌ی کانال در اورلی نمایش داده می‌شوند.",
+    channelEmpty: "نام کانال را بنویس.",
+    channelNotFound: "کانال پیدا نشد. املای نام کانال را چک کن.",
+    channelNetwork: "به کیک وصل نشد؛ اینترنت را چک کن و دوباره بزن.",
+    channelGeneric: "اتصال ناموفق بود؛ دوباره تلاش کن.",
+    goalInvalid: "لینک درست نیست؛ لینک کامل Donofa را کپی کن.",
+    goalNetwork: "Goal خوانده نشد؛ اینترنت را چک کن و دوباره ذخیره کن.",
+    goalGeneric: "Goal خوانده نشد؛ دوباره ذخیره کن.",
+    kickAdvancedSummary: "پیشرفته: Client ID و Client Secret",
+    kickAdvancedNote: "برای ورود با Kick باید یک بار در Kick برنامه بسازی و این دو مقدار را اینجا ذخیره کنی؛ فقط روی همین سیستم می‌مانند.",
+    kickOauthConnected: "متصل به Kick",
+    kickOauthNot: "وصل نیست. با «اتصال با Kick» وارد شو تا کانالت خودکار پیدا شود.",
+    openLink: "باز کردن",
+    testLink: "تست",
+    openFailed: "مرورگر باز نشد؛ لینک را دستی کپی کن.",
+    meldHintShort: "این لینک‌ها را در Meld به‌عنوان Browser Source اضافه کن. دکمه‌ی «تست» نسخه‌ی نمونه را در مرورگر باز می‌کند.",
+    meldGuideBtn: "راهنمای افزودن به Meld ←",
+    reset: "بازنشانی",
+    resetConfirm: "همه‌ی تنظیم‌های این بخش به پیش‌فرض برگردد؟",
+    resetDone: "به پیش‌فرض برگشت.",
+    searchPlaceholder: "جست‌وجو در تنظیمات…",
+    searchEmpty: "چیزی پیدا نشد.",
+    testMsg: "پیام آزمایشی +",
+    bgChecker: "شفاف",
+    bgLight: "روشن",
+    bgDark: "تیره",
+    bgGame: "صحنه‌ی بازی",
+    chatDirLabel: "جهت چت",
+    dirAuto: "خودکار",
+    dirRtl: "راست‌به‌چپ",
+    dirLtr: "چپ‌به‌راست",
+    goalDirLabel: "جهت نوار",
+    goalDirAuto: "هم‌جهت با زبان",
+    digitsLabel: "رقم‌ها",
+    digitsAuto: "هم‌جهت با زبان",
+    unitLabel: "واحد پول",
+    unitAuto: "از Donofa",
+    unitCustom: "دلخواه…",
+    lineHeightLabel: "فاصله‌ی خطوط",
+    msgPadLabel: "فاصله‌ی داخل پیام (px)",
+    goalStatCurrent: "فعلی",
+    goalStatTarget: "هدف",
+    goalStatPct: "پیشرفت",
+    wizTitle: "به ReChat خوش آمدی!",
+    wizStep1Text: "در سه قدم آماده‌ی استریم شو. اول: نام کانال کیکت را بزن و وصل شو.",
+    wizChannelLabel: "نام کانال کیک",
+    wizConnect: "اتصال",
+    wizSkip: "رد کردن",
+    wizStep2Title: "لینک‌های اورلی را کپی کن",
+    wizStep2Text: "این دو لینک را در Meld به‌عنوان Browser Source اضافه می‌کنی.",
+    wizCopyChat: "کپی لینک چت",
+    wizCopyGoal: "کپی لینک Goal",
+    wizPrev: "قبلی",
+    wizNext: "بعدی",
+    wizStep3Title: "در Meld اضافه کن",
+    wizStep3Text: "در Meld: پنل Layers ← + ← Browser، بعد لینک را در قسمت URL بچسبان. پس‌زمینه شفاف است و نیازی به Chroma Key نیست.",
+    wizFinish: "تمام شد!",
+    reopenOnboard: "نمایش راهنمای شروع",
+    usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۰",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۰ (M9 — بازطراحی کامل رابط کاربری). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -212,6 +345,73 @@ const dict: Record<Lang, Record<string, string>> = {
     connected: "Connected ✓",
     reconnecting: "Reconnecting…",
     error: "Connection error",
+    // ---- M9 ----
+    connTitle: "Kick connection",
+    connNote: "Pick a mode; the simplest is “Channel name” and it works with no extra setup.",
+    modeChannel: "Channel name (simple)",
+    modeOauth: "Sign in with Kick (recommended)",
+    channelLabelNew: "Channel name or channel link",
+    channelHint: "Live channel messages show up in the overlay.",
+    channelEmpty: "Type a channel name.",
+    channelNotFound: "Channel not found. Check the spelling.",
+    channelNetwork: "Could not reach Kick; check your connection and retry.",
+    channelGeneric: "Connection failed; try again.",
+    goalInvalid: "That link looks wrong; paste the full Donofa link.",
+    goalNetwork: "Goal could not be read; check your connection and save again.",
+    goalGeneric: "Goal could not be read; save again.",
+    kickAdvancedSummary: "Advanced: Client ID and Client Secret",
+    kickAdvancedNote: "To sign in with Kick, create an app in Kick once and save these two values here; they stay on this machine only.",
+    kickOauthConnected: "Connected to Kick",
+    kickOauthNot: "Not connected. Sign in with Kick so your channel is found automatically.",
+    openLink: "Open",
+    testLink: "Test",
+    openFailed: "Browser did not open; copy the link manually.",
+    meldHintShort: "Add these links in Meld as a Browser Source. “Test” opens a sample version in the browser.",
+    meldGuideBtn: "How to add to Meld →",
+    reset: "Reset",
+    resetConfirm: "Reset this section to defaults?",
+    resetDone: "Reset to defaults.",
+    searchPlaceholder: "Search settings…",
+    searchEmpty: "Nothing found.",
+    testMsg: "Test message +",
+    bgChecker: "Transparent",
+    bgLight: "Light",
+    bgDark: "Dark",
+    bgGame: "Game scene",
+    chatDirLabel: "Chat direction",
+    dirAuto: "Auto",
+    dirRtl: "Right-to-left",
+    dirLtr: "Left-to-right",
+    goalDirLabel: "Bar direction",
+    goalDirAuto: "Follow language",
+    digitsLabel: "Digits",
+    digitsAuto: "Follow language",
+    unitLabel: "Currency unit",
+    unitAuto: "From Donofa",
+    unitCustom: "Custom…",
+    lineHeightLabel: "Line height",
+    msgPadLabel: "Message padding (px)",
+    goalStatCurrent: "Raised",
+    goalStatTarget: "Target",
+    goalStatPct: "Progress",
+    wizTitle: "Welcome to ReChat!",
+    wizStep1Text: "Get stream-ready in three steps. First: type your Kick channel name and connect.",
+    wizChannelLabel: "Kick channel name",
+    wizConnect: "Connect",
+    wizSkip: "Skip",
+    wizStep2Title: "Copy the overlay links",
+    wizStep2Text: "You will add these two links in Meld as Browser Sources.",
+    wizCopyChat: "Copy chat link",
+    wizCopyGoal: "Copy goal link",
+    wizPrev: "Back",
+    wizNext: "Next",
+    wizStep3Title: "Add it in Meld",
+    wizStep3Text: "In Meld: Layers panel → + → Browser, then paste the link into the URL field. The background is transparent, no Chroma Key needed.",
+    wizFinish: "Done!",
+    reopenOnboard: "Show getting-started guide",
+    usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
+    versionNoteNew: "Version 0.3.0",
+    aboutTextNew: "Version 0.3.0 (M9 — full UI redesign). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -228,9 +428,6 @@ const langBtn = $<HTMLButtonElement>("langBtn");
 const chatStatus = $("chatStatus");
 const goalStatus = $("goalStatus");
 const hideCmdChk = $<HTMLInputElement>("hideCmdChk");
-const usersTa = $<HTMLTextAreaElement>("usersTa");
-const botsTa = $<HTMLTextAreaElement>("botsTa");
-const wordsTa = $<HTMLTextAreaElement>("wordsTa");
 const shell = $("shell");
 
 let lang: Lang = (localStorage.getItem("rechat-lang") as Lang) || "fa";
@@ -244,28 +441,80 @@ type Filters = {
   hidden_bots: string[];
 };
 
-function lines(ta: HTMLTextAreaElement): string[] {
-  return ta.value
-    .split("\n")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+// ---------- M9 chip inputs (replace the raw filter textareas) ----------
+
+type ChipBox = { box: HTMLDivElement; input: HTMLInputElement; values: () => string[]; set: (v: string[]) => void };
+function makeChips(boxId: string, inputId: string, onChange: () => void): ChipBox {
+  const box = $<HTMLDivElement>(boxId);
+  const input = $<HTMLInputElement>(inputId);
+  const render = (values: string[]): void => {
+    for (const chip of [...box.querySelectorAll(".chip")]) chip.remove();
+    for (const v of values) {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = v;
+      const x = document.createElement("button");
+      x.type = "button";
+      x.textContent = "×";
+      x.setAttribute("aria-label", `remove ${v}`);
+      x.addEventListener("click", () => {
+        chip.remove();
+        onChange();
+      });
+      chip.appendChild(x);
+      box.insertBefore(chip, input);
+    }
+  };
+  const values = (): string[] =>
+    [...box.querySelectorAll(".chip")].map((c) => (c.firstChild?.textContent ?? "").trim()).filter(Boolean);
+  const commit = (): void => {
+    const v = input.value.trim();
+    input.value = "";
+    if (!v) return;
+    const cur = values();
+    if (!cur.includes(v)) cur.push(v);
+    render(cur);
+    onChange();
+  };
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Backspace" && input.value === "") {
+      const chips = box.querySelectorAll(".chip");
+      chips[chips.length - 1]?.remove();
+      onChange();
+    }
+  });
+  input.addEventListener("blur", commit);
+  box.addEventListener("click", () => input.focus());
+  return { box, input, values, set: render };
 }
+
+let chipsUsers: ChipBox;
+let chipsBots: ChipBox;
+let chipsWords: ChipBox;
 
 function currentFilters(): Filters {
   return {
     hide_commands: hideCmdChk.checked,
-    hidden_users: lines(usersTa),
-    hidden_words: lines(wordsTa),
-    hidden_bots: lines(botsTa),
+    hidden_users: chipsUsers.values(),
+    hidden_words: chipsWords.values(),
+    hidden_bots: chipsBots.values(),
   };
 }
 
 function applyFiltersToUi(f: Filters): void {
   hideCmdChk.checked = f.hide_commands;
-  usersTa.value = f.hidden_users.join("\n");
-  wordsTa.value = f.hidden_words.join("\n");
-  botsTa.value = f.hidden_bots.join("\n");
+  chipsUsers.set(f.hidden_users);
+  chipsWords.set(f.hidden_words);
+  chipsBots.set(f.hidden_bots);
 }
+
+// Chip boxes must exist before the saved-filters restore below runs.
+chipsUsers = makeChips("usersChips", "usersChipInput", scheduleFilterSave);
+chipsBots = makeChips("botsChips", "botsChipInput", scheduleFilterSave);
+chipsWords = makeChips("wordsChips", "wordsChipInput", scheduleFilterSave);
 
 try {
   const saved = localStorage.getItem("rechat-filters");
@@ -301,18 +550,46 @@ function statusText(state: string, channel?: string, detail?: string): string {
   return s;
 }
 
+// One chat status, shown in the connection card AND the header pill.
+// Backend detail strings are technical; map the common ones to a
+// human-readable message with a suggested fix.
+function humanChatError(detail?: string): string {
+  const t = dict[lang];
+  const d = (detail ?? "").toLowerCase();
+  if (d.includes("not found") || d.includes("404") || d.includes("no channel")) return t.channelNotFound;
+  if (d.includes("network") || d.includes("fetch") || d.includes("timed out") || d.includes("econnrefused") || d.includes("dns")) return t.channelNetwork;
+  return t.channelGeneric;
+}
 function renderStatus(state: string, channel?: string, detail?: string): void {
-  chatStatus.textContent = statusText(state, channel, detail);
-  chatStatus.classList.toggle("ok", state === "connected");
-  chatStatus.style.background = state === "connected" ? "#16a34a" : state === "error" ? "#dc2626" : "";
+  const t = dict[lang];
+  const channelError = $("channelError");
+  let dot: "ok" | "warn" | "bad" | "idle" = "idle";
+  let text = statusText(state, channel);
+  if (state === "connected") {
+    dot = "ok";
+    channelError.textContent = "";
+  } else if (state === "resolving" || state === "connecting" || state === "reconnecting") {
+    dot = "warn";
+    channelError.textContent = "";
+  } else if (state === "error") {
+    dot = "bad";
+    text = statusText("error");
+    channelError.textContent = humanChatError(detail);
+  } else {
+    channelError.textContent = "";
+  }
+  setPill(chatStatus, dot, text);
+  const hdr = $("hdrKickStatus");
+  const hdrText = state === "connected" ? `${t.connected}${channel ? ` (${channel})` : ""}` : text;
+  setPill(hdr, dot, hdrText);
 }
 
 const chatUrl = $<HTMLInputElement>("chatUrl");
 const goalUrl = $<HTMLInputElement>("goalUrl");
 
 function refreshOverlayUrls(): void {
-  chatUrl.value = `${base}/chat?lang=${lang}`;
-  goalUrl.value = `${base}/goal?lang=${lang}`;
+  chatUrl.value = `${base}/chat?${overlayParams()}`;
+  goalUrl.value = `${base}/goal?${overlayParams()}`;
 }
 
 function applyLang(): void {
@@ -325,8 +602,12 @@ function applyLang(): void {
   ($("navCustomize").textContent = t.navCustomize);
   ($("navGuide").textContent = t.navGuide);
   ($("navSettings").textContent = t.navSettings);
-  ($("kickAutoTitle").textContent = t.kickAutoTitle);
-  ($("kickAutoNote").textContent = t.kickAutoNote);
+  ($("connTitle").textContent = t.connTitle);
+  ($("connNote").textContent = t.connNote);
+  ($("modeChannelBtn").textContent = t.modeChannel);
+  ($("modeOauthBtn").textContent = t.modeOauth);
+  ($("kickAdvancedSummary").textContent = t.kickAdvancedSummary);
+  ($("kickAdvancedNote").textContent = t.kickAdvancedNote);
   ($("kickClientIdLabel").textContent = t.kickClientIdLabel);
   ($("kickSecretLabel").textContent = t.kickSecretLabel);
   ($("kickSaveBtn").textContent = t.kickSave);
@@ -334,17 +615,114 @@ function applyLang(): void {
   ($("kickGuideText").textContent = t.kickGuideText);
   ($("kickConnectBtn").textContent = t.kickConnect);
   ($("kickDisconnectBtn").textContent = t.kickDisconnect);
-  ($("chatTitle").textContent = t.chatTitle);
-  ($("channelLabel").textContent = t.channelLabel);
+  ($("channelLabel").textContent = t.channelLabelNew);
   ($("connectBtn").textContent = t.connect);
   ($("disconnectBtn").textContent = t.disconnect);
-  ($("chatNote").textContent = t.chatNote);
+  ($("chatNote").textContent = t.channelHint);
   ($("filtersTitle").textContent = t.filtersTitle);
   ($("hideCmdLabel").textContent = t.hideCmdLabel);
   ($("usersLabel").textContent = t.usersLabel);
   ($("botsLabel").textContent = t.botsLabel);
   ($("wordsLabel").textContent = t.wordsLabel);
-  ($("filtersNote").textContent = t.filtersNote);
+  ($("filtersNote").textContent = t.usersHint);
+  ($("resetFiltersBtn").textContent = t.reset);
+  ($("resetChatBtn").textContent = t.reset);
+  ($("resetGoalBtn").textContent = t.reset);
+  ($("resetCssBtn").textContent = t.reset);
+  ($("openChatBtn").textContent = t.openLink);
+  ($("testChatBtn").textContent = t.testLink);
+  ($("openGoalBtn").textContent = t.openLink);
+  ($("testGoalBtn").textContent = t.testLink);
+  ($("guideLinkBtn").textContent = t.meldGuideBtn);
+  ($("testMsgBtn").textContent = t.testMsg);
+  for (const b of document.querySelectorAll<HTMLButtonElement>(".pv-toolbar button[data-bg]")) {
+    b.textContent = b.dataset.bg === "" ? t.bgChecker : b.dataset.bg === "light" ? t.bgLight : b.dataset.bg === "dark" ? t.bgDark : t.bgGame;
+  }
+  ($("searchEmpty").textContent = t.searchEmpty);
+  ($("settingsSearch") as HTMLInputElement).placeholder = t.searchPlaceholder;
+  ($("wizTitle").textContent = t.wizTitle);
+  ($("wizStep1Text").textContent = t.wizStep1Text);
+  ($("wizChannelLabel").textContent = t.wizChannelLabel);
+  ($("wizConnectBtn").textContent = t.wizConnect);
+  ($("wizSkipBtn").textContent = t.wizSkip);
+  ($("wizStep2Title").textContent = t.wizStep2Title);
+  ($("wizStep2Text").textContent = t.wizStep2Text);
+  ($("wizCopyChatBtn").textContent = t.wizCopyChat);
+  ($("wizCopyGoalBtn").textContent = t.wizCopyGoal);
+  ($("wizBack2Btn").textContent = t.wizPrev);
+  ($("wizNext2Btn").textContent = t.wizNext);
+  ($("wizSkip2Btn").textContent = t.wizSkip);
+  ($("wizStep3Title").textContent = t.wizStep3Title);
+  ($("wizStep3Text").textContent = t.wizStep3Text);
+  ($("wizBack3Btn").textContent = t.wizPrev);
+  ($("wizFinishBtn").textContent = t.wizFinish);
+  ($("reopenOnboardBtn").textContent = t.reopenOnboard);
+  // Inline field labels (fa text baked into the HTML) + select options.
+  const setLabel = (inputId: string, text: string): void => {
+    const lab = document.getElementById(inputId)?.closest("label");
+    if (lab && lab.firstChild) lab.firstChild.textContent = text;
+  };
+  const setSwitchLabel = (inputId: string, text: string): void => {
+    const lab = document.getElementById(inputId)?.closest("label");
+    const span = lab?.querySelector("span:last-child");
+    if (span) span.textContent = text;
+  };
+  const setOptions = (selId: string, texts: string[]): void => {
+    const sel = document.getElementById(selId) as HTMLSelectElement | null;
+    if (!sel) return;
+    [...sel.options].forEach((o, i) => { if (texts[i]) o.textContent = texts[i]; });
+  };
+  if (lang === "en") {
+    setLabel("thChatSize", "Font size (px)");
+    setLabel("thChatOpacity", "Background opacity (0–1)");
+    setLabel("thChatText", "Text color");
+    setLabel("thChatRadius", "Corner radius (px)");
+    setLabel("thChatGap", "Message gap (px)");
+    setLabel("thMaxMsg", "Max messages on screen");
+    setLabel("thLineHeight", "Line height");
+    setLabel("thMsgPad", "Message padding (px)");
+    setLabel("thChatDir", "Chat direction");
+    setLabel("thGoalTitle", "Title size (px)");
+    setLabel("thGoalH", "Bar height (px)");
+    setLabel("thGoalC1", "Bar start color");
+    setLabel("thGoalC2", "Bar end color");
+    setLabel("thGoalDir", "Bar direction");
+    setLabel("thDigits", "Digits");
+    setLabel("thGoalUnit", "Currency unit");
+    setLabel("thGoalUnitCustom", "Custom unit");
+    setSwitchLabel("thBadges", "Show badges");
+    setSwitchLabel("thUserColor", "Username color from Kick");
+    setSwitchLabel("thGoalValues", "Show amounts");
+    setOptions("thChatDir", [t.dirAuto, t.dirRtl, t.dirLtr]);
+    setOptions("thGoalDir", [t.goalDirAuto, t.dirRtl, t.dirLtr]);
+    setOptions("thDigits", [t.digitsAuto, "Persian (۱۲۳۴۵۶۷۸۹۰)", "English (1234567890)"]);
+    setOptions("thGoalUnit", [t.unitAuto, t.unitCustom]);
+  } else {
+    setLabel("thChatSize", "اندازه‌ی قلم (px)");
+    setLabel("thChatOpacity", "شفافیت پس‌زمینه (۰ تا ۱)");
+    setLabel("thChatText", "رنگ متن");
+    setLabel("thChatRadius", "گردی گوشه (px)");
+    setLabel("thChatGap", "فاصله‌ی پیام‌ها (px)");
+    setLabel("thMaxMsg", "بیشترین پیام روی صفحه");
+    setLabel("thLineHeight", "فاصله‌ی خطوط");
+    setLabel("thMsgPad", "فاصله‌ی داخل پیام (px)");
+    setLabel("thChatDir", "جهت چت");
+    setLabel("thGoalTitle", "اندازه‌ی تیتر (px)");
+    setLabel("thGoalH", "ارتفاع نوار (px)");
+    setLabel("thGoalC1", "رنگ شروع نوار");
+    setLabel("thGoalC2", "رنگ پایان نوار");
+    setLabel("thGoalDir", "جهت نوار");
+    setLabel("thDigits", "رقم‌ها");
+    setLabel("thGoalUnit", "واحد پول");
+    setLabel("thGoalUnitCustom", "واحد دلخواه");
+    setSwitchLabel("thBadges", "بج‌ها نشان داده شوند");
+    setSwitchLabel("thUserColor", "رنگ نام کاربر از کیک بیاید");
+    setSwitchLabel("thGoalValues", "مبلغ‌ها نشان داده شوند");
+    setOptions("thChatDir", [t.dirAuto, t.dirRtl, t.dirLtr]);
+    setOptions("thGoalDir", [t.goalDirAuto, t.dirRtl, t.dirLtr]);
+    setOptions("thDigits", [t.digitsAuto, "فارسی (۱۲۳۴۵۶۷۸۹۰)", "انگلیسی (1234567890)"]);
+    setOptions("thGoalUnit", [t.unitAuto, t.unitCustom]);
+  }
   ($("customTitle").textContent = t.customTitle);
   ($("profileLabel").textContent = t.profileLabel);
   ($("profileNote").textContent = t.profileNote);
@@ -378,22 +756,22 @@ function applyLang(): void {
   ($("goalTitle").textContent = t.goalTitle);
   ($("goalLabel").textContent = t.goalLabel);
   ($("goalSaveBtn").textContent = t.save);
-  (goalStatus.textContent = goalInput.value ? t.saved : t.goalUnset);
   ($("overlayTitle").textContent = t.overlayTitle);
   ($("copyChatBtn").textContent = t.copyLink);
   ($("copyGoalBtn").textContent = t.copyLink);
-  ($("overlayNote").textContent = t.overlayNote);
+  ($("overlayNote").textContent = t.meldHintShort);
   ($("settingsTitle").textContent = t.settingsTitle);
   ($("langLabel").textContent = t.langLabel);
   ($("autoUpdateLabel").textContent = t.autoUpdateLabel);
-  ($("versionNote").textContent = t.versionNote);
+  ($("versionNote").textContent = t.versionNoteNew);
   ($("aboutTitle").textContent = t.aboutTitle);
-  ($("aboutText").textContent = t.aboutText);
+  ($("aboutText").textContent = t.aboutTextNew);
   ($("aboutLicense").textContent = t.aboutLicense);
   ($("updateBtn").textContent = t.updateBtn);
   ($("trayNote").textContent = t.trayNote);
   ($("quitBtn").textContent = t.quitApp);
   channelInput.placeholder = lang === "fa" ? "kick.com/tahaa" : "kick.com/username";
+  ($("wizChannel") as HTMLInputElement).placeholder = lang === "fa" ? "kick.com/tahaa" : "kick.com/username";
   goalInput.placeholder = "https://…";
   ($("newProfileName") as HTMLInputElement).placeholder =
     lang === "fa" ? "نام پروفایل تازه" : "New profile name";
@@ -427,6 +805,7 @@ for (const btn of document.querySelectorAll<HTMLButtonElement>("#mainNav button"
     for (const page of document.querySelectorAll<HTMLElement>(".page")) {
       page.hidden = page.id !== `page-${btn.dataset.page}`;
     }
+    applySearch();
   });
 }
 
@@ -440,20 +819,38 @@ for (const head of document.querySelectorAll<HTMLButtonElement>(".acc-head")) {
   });
 }
 
+// ---------- M9 connection modes (channel = default, OAuth = tab) ----------
+function setConnMode(mode: "channel" | "oauth"): void {
+  localStorage.setItem("rechat-conn-mode", mode);
+  ($("pane-channel").hidden = mode !== "channel");
+  ($("pane-oauth").hidden = mode !== "oauth");
+  ($("modeChannelBtn").classList.toggle("active", mode === "channel"));
+  ($("modeOauthBtn").classList.toggle("active", mode === "oauth"));
+}
+$("modeChannelBtn").addEventListener("click", () => setConnMode("channel"));
+$("modeOauthBtn").addEventListener("click", () => setConnMode("oauth"));
+setConnMode((localStorage.getItem("rechat-conn-mode") as "channel" | "oauth") || "channel");
+
 // ---------- Manual chat connect (fallback) ----------
 $("connectBtn").addEventListener("click", () => {
   const channel = channelInput.value.trim();
   localStorage.setItem("rechat-channel", channel);
-  if (!channel) return;
+  if (!channel) {
+    channelInput.classList.add("invalid");
+    ($("channelError").textContent = dict[lang].channelEmpty);
+    return;
+  }
+  channelInput.classList.remove("invalid");
+  ($("channelError").textContent = "");
   localStorage.setItem("rechat-auto-chat", "1");
   if (isTauri) {
     void invoke("connect_chat", { channel }).catch(() => {
-      renderStatus("error", channel, "فراخوانی ناموفق بود");
+      renderStatus("error", channel, "network error");
     });
     renderStatus("resolving", channel);
   } else {
     renderStatus("idle");
-    chatStatus.textContent = dict[lang].saved;
+    showToast(dict[lang].saved);
   }
 });
 $("disconnectBtn").addEventListener("click", () => {
@@ -465,23 +862,37 @@ $("disconnectBtn").addEventListener("click", () => {
 function renderGoalStatus(state: string, detail?: string): void {
   const t = dict[lang];
   let s: string;
+  let dot: "ok" | "warn" | "bad" | "idle" = "idle";
   switch (state) {
     case "live":
       s = t.goalLive;
+      dot = "ok";
       break;
     case "loading":
       s = t.goalLoading;
+      dot = "warn";
       break;
     case "error":
       s = t.goalError;
+      dot = "bad";
       break;
     default:
       s = t.goalUnset;
   }
-  if (detail) s += ` — ${detail}`;
-  goalStatus.textContent = s;
-  goalStatus.style.background =
-    state === "live" ? "#16a34a" : state === "error" ? "#dc2626" : "";
+  setPill(goalStatus, dot, s);
+  setPill($("hdrGoalStatus"), dot, s);
+  const errEl = $("goalErrorText");
+  if (state === "error") {
+    const d = (detail ?? "").toLowerCase();
+    errEl.textContent =
+      d.includes("invalid") || d.includes("parse") || d.includes("not a donofa") || d.includes("404")
+        ? t.goalInvalid
+        : d.includes("network") || d.includes("fetch") || d.includes("timed out")
+          ? t.goalNetwork
+          : t.goalGeneric;
+  } else {
+    errEl.textContent = "";
+  }
 }
 
 $("goalSaveBtn").addEventListener("click", () => {
@@ -491,13 +902,20 @@ $("goalSaveBtn").addEventListener("click", () => {
     renderGoalStatus("idle");
     return;
   }
+  // Inline validation with a human-readable fix, before any backend call.
+  if (!/^https?:\/\//i.test(link) || !link.includes("donofa")) {
+    goalInput.classList.add("invalid");
+    renderGoalStatus("error", "invalid link");
+    return;
+  }
+  goalInput.classList.remove("invalid");
   if (isTauri) {
     void invoke("connect_goal", { link }).catch(() => {
-      renderGoalStatus("error", "فراخوانی ناموفق بود");
+      renderGoalStatus("error", "network error");
     });
     renderGoalStatus("loading");
   } else {
-    goalStatus.textContent = dict[lang].saved;
+    showToast(dict[lang].saved);
   }
 });
 
@@ -511,10 +929,8 @@ function scheduleFilterSave(): void {
     void invoke("save_filters", { filters: f }).catch(() => undefined);
   }, 400);
 }
-for (const el of [hideCmdChk, usersTa, botsTa, wordsTa]) {
-  el.addEventListener("input", scheduleFilterSave);
-  el.addEventListener("change", scheduleFilterSave);
-}
+hideCmdChk.addEventListener("input", scheduleFilterSave);
+hideCmdChk.addEventListener("change", scheduleFilterSave);
 
 async function copy(input: HTMLInputElement, btn: HTMLButtonElement): Promise<void> {
   try {
@@ -525,10 +941,38 @@ async function copy(input: HTMLInputElement, btn: HTMLButtonElement): Promise<vo
   }
   const prev = btn.textContent;
   btn.textContent = dict[lang].copied;
+  showToast(dict[lang].copied);
   setTimeout(() => (btn.textContent = prev), 1500);
 }
 $("copyChatBtn").addEventListener("click", (e) => void copy(chatUrl, e.currentTarget as HTMLButtonElement));
 $("copyGoalBtn").addEventListener("click", (e) => void copy(goalUrl, e.currentTarget as HTMLButtonElement));
+$("openChatBtn").addEventListener("click", (e) => void openInBrowser(chatUrl.value, e.currentTarget as HTMLButtonElement));
+$("openGoalBtn").addEventListener("click", (e) => void openInBrowser(goalUrl.value, e.currentTarget as HTMLButtonElement));
+$("testChatBtn").addEventListener("click", (e) => void openInBrowser(`${chatUrl.value}&demo=1`, e.currentTarget as HTMLButtonElement));
+$("testGoalBtn").addEventListener("click", (e) => void openInBrowser(`${goalUrl.value}&demo=1`, e.currentTarget as HTMLButtonElement));
+$("guideLinkBtn").addEventListener("click", () => {
+  document.querySelector<HTMLButtonElement>('#mainNav button[data-page="guide"]')?.click();
+});
+
+// ---------- M9 preview toolbar: backgrounds + test message ----------
+for (const b of document.querySelectorAll<HTMLButtonElement>(".pv-toolbar button[data-bg]")) {
+  b.addEventListener("click", () => {
+    for (const x of document.querySelectorAll<HTMLButtonElement>(".pv-toolbar button[data-bg]")) {
+      x.classList.toggle("active", x === b);
+    }
+    const bg = b.dataset.bg ?? "";
+    for (const frame of [previewChatFrame, previewGoalFrame]) {
+      frame.classList.remove("pv-bg-light", "pv-bg-dark", "pv-bg-game");
+      if (bg) frame.classList.add(`pv-bg-${bg}`);
+    }
+  });
+}
+$("testMsgBtn").addEventListener("click", () => {
+  const pool = lang === "fa" ? TEST_SAMPLES_FA : TEST_SAMPLES_EN;
+  previewExtra.push(pool[Math.floor(Math.random() * pool.length)]);
+  updatePreview();
+  showToast(dict[lang].testMsg);
+});
 
 // ---------- Kick OAuth auto-connect ----------
 type KickOauthState = {
@@ -539,22 +983,18 @@ type KickOauthState = {
   slug?: string;
 };
 
-const kickStatus = $("kickStatus");
 const kickClientId = $<HTMLInputElement>("kickClientId");
 const kickSecret = $<HTMLInputElement>("kickSecret");
 const kickSavedNote = $("kickSavedNote");
+const kickOauthState = $("kickOauthState");
 
 function renderKick(s: KickOauthState): void {
   const t = dict[lang];
   kickClientId.value = s.client_id;
   if (s.connected) {
-    kickStatus.textContent = `${t.kickConnected} (${s.username ?? s.slug ?? ""})`;
-    kickStatus.classList.add("ok");
-    kickStatus.style.background = "#16a34a";
+    kickOauthState.textContent = `${t.kickOauthConnected} (${s.username ?? s.slug ?? ""})`;
   } else {
-    kickStatus.textContent = t.kickNotConnected;
-    kickStatus.classList.remove("ok");
-    kickStatus.style.background = "";
+    kickOauthState.textContent = t.kickOauthNot;
   }
 }
 
@@ -591,7 +1031,7 @@ $("kickConnectBtn").addEventListener("click", () => {
   if (!isTauri) return;
   void invoke("start_kick_oauth")
     .then(() => {
-      kickStatus.textContent = dict[lang].kickWaiting;
+      kickOauthState.textContent = dict[lang].kickWaiting;
       let tries = 0;
       clearInterval(kickPollTimer);
       kickPollTimer = setInterval(() => {
@@ -612,7 +1052,7 @@ $("kickConnectBtn").addEventListener("click", () => {
       }, 2000);
     })
     .catch(() => {
-      kickStatus.textContent = dict[lang].kickNeedConfig;
+      kickOauthState.textContent = dict[lang].kickNeedConfig;
     });
 });
 $("kickDisconnectBtn").addEventListener("click", () => {
@@ -662,6 +1102,8 @@ type Theme = {
   chat_text_color: string;
   chat_radius: number;
   chat_gap: number;
+  chat_line_height: number;
+  chat_msg_padding: number;
   show_badges: boolean;
   show_username_color: boolean;
   max_messages: number;
@@ -681,6 +1123,8 @@ function defaultTheme(): Theme {
     chat_text_color: "#ffffff",
     chat_radius: 10,
     chat_gap: 8,
+    chat_line_height: 1.7,
+    chat_msg_padding: 10,
     show_badges: true,
     show_username_color: true,
     max_messages: 50,
@@ -695,7 +1139,7 @@ function defaultTheme(): Theme {
 
 // Mirrors theme.rs Theme::css (keep the two in sync).
 function buildThemeCss(t: Theme): string {
-  let css = `:root{--chat-font-size:${t.chat_font_size}px;--chat-bg-opacity:${t.chat_bg_opacity};--chat-text:${t.chat_text_color};--chat-radius:${t.chat_radius}px;--chat-gap:${t.chat_gap}px;--goal-title-size:${t.goal_title_size}px;--goal-bar-h:${t.goal_bar_height}px;--goal-c1:${t.goal_bar_c1};--goal-c2:${t.goal_bar_c2};}`;
+  let css = `:root{--chat-font-size:${t.chat_font_size}px;--chat-bg-opacity:${t.chat_bg_opacity};--chat-text:${t.chat_text_color};--chat-radius:${t.chat_radius}px;--chat-gap:${t.chat_gap}px;--chat-line-height:${t.chat_line_height};--chat-msg-padding:${t.chat_msg_padding}px;--goal-title-size:${t.goal_title_size}px;--goal-bar-h:${t.goal_bar_height}px;--goal-c1:${t.goal_bar_c1};--goal-c2:${t.goal_bar_c2};}`;
   if (!t.show_badges) css += ".msg .badge,.msg .badge-img{display:none!important}";
   if (!t.show_username_color) css += ".msg .user{color:var(--chat-text)!important}";
   if (!t.show_goal_values) css += "#goal .values{display:none!important}";
@@ -774,6 +1218,8 @@ function themeFromControls(): Theme {
     chat_text_color: $<HTMLInputElement>("thChatText").value || "#ffffff",
     chat_radius: num($<HTMLInputElement>("thChatRadius"), 10),
     chat_gap: num($<HTMLInputElement>("thChatGap"), 8),
+    chat_line_height: num($<HTMLInputElement>("thLineHeight"), 1.7),
+    chat_msg_padding: num($<HTMLInputElement>("thMsgPad"), 10),
     show_badges: $<HTMLInputElement>("thBadges").checked,
     show_username_color: $<HTMLInputElement>("thUserColor").checked,
     max_messages: num($<HTMLInputElement>("thMaxMsg"), 50),
@@ -792,6 +1238,8 @@ function loadThemeIntoControls(t: Theme): void {
   $<HTMLInputElement>("thChatText").value = t.chat_text_color;
   $<HTMLInputElement>("thChatRadius").value = String(t.chat_radius);
   $<HTMLInputElement>("thChatGap").value = String(t.chat_gap);
+  $<HTMLInputElement>("thLineHeight").value = String(t.chat_line_height ?? 1.7);
+  $<HTMLInputElement>("thMsgPad").value = String(t.chat_msg_padding ?? 10);
   $<HTMLInputElement>("thBadges").checked = t.show_badges;
   $<HTMLInputElement>("thUserColor").checked = t.show_username_color;
   $<HTMLInputElement>("thMaxMsg").value = String(t.max_messages);
@@ -816,17 +1264,56 @@ function renderProfileSelect(): void {
   profileSel.value = currentProfile;
 }
 
+// Extra preview messages added with the "Test message" button.
+let previewExtra: string[] = [];
+const TEST_SAMPLES_FA = [
+  "سلام! امشب چه بازی‌ای می‌ریم؟",
+  "این باس خیلی سخته، ولی great fight!",
+  "دمت گرم، استریم عالی بود 🔥",
+];
+const TEST_SAMPLES_EN = [
+  "Hey! What are we playing tonight?",
+  "That boss fight was insane 🔥",
+  "Great stream, loved the soulslike run!",
+];
+
 function previewDoc(kind: "chat" | "goal"): string {
   const css = buildThemeCss(themeFromControls());
   const head = `<meta charset="utf-8"><style>${baseOverlayCss}</style><style>${css}</style>`;
-  const dir = lang === "fa" ? "rtl" : "ltr";
-  const fmt = new Intl.NumberFormat(lang === "fa" ? "fa-IR" : "en-US");
+  const t = dict[lang];
+  const pageDir = (d: string): string => (d === "rtl" ? "rtl" : d === "ltr" ? "ltr" : lang === "fa" ? "rtl" : "ltr");
   if (kind === "chat") {
+    const dir = pageDir(display.chatDir);
+    const msgDir = display.chatDir === "rtl" || display.chatDir === "ltr" ? display.chatDir : "auto";
     const mod = lang === "fa" ? "مدیر" : "Mod";
-    return `<!doctype html><html dir="${dir}"><head>${head}</head><body><div id="pinned"><div class="msg" dir="rtl"><span class="badge moderator">${mod}</span><span class="user" style="color:#4ade80">tahaa</span>: ${lang === "fa" ? "این پیام پین‌شده است" : "This message is pinned"}</div></div><div id="messages"><div class="msg" dir="rtl"><span class="badge moderator">${mod}</span><span class="user" style="color:#4ade80">tahaa</span>: ${lang === "fa" ? "سلام به همه! بازی امشب سولزلایک است" : "Hey everyone! Tonight we play a soulslike"}</div><div class="msg" dir="ltr"><span class="user" style="color:#58a6ff">soul_fan</span>: this boss fight is insane 🔥</div><div class="msg" dir="rtl"><span class="badge vip">VIP</span><span class="user" style="color:#f472b6">nightowl</span>: ${lang === "fa" ? "چت فارسی و انگلیسی قاطی هم خوب درمیاد، great stream!" : "Persian and English chat mix nicely, great stream!"}</div></div></body></html>`;
+    const fa = lang === "fa";
+    const emoteSvg = "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><circle cx="16" cy="16" r="14" fill="#4ade80"/><circle cx="11" cy="13" r="2" fill="#04160a"/><circle cx="21" cy="13" r="2" fill="#04160a"/><path d="M10 20 Q16 26 22 20" stroke="#04160a" stroke-width="2" fill="none"/></svg>`);
+    const samples = fa
+      ? [
+          `<div class="msg" dir="${msgDir}"><bdi><span class="badge moderator">${mod}</span><span class="user" style="color:#4ade80">tahaa</span></bdi>: سلام به همه! بازی امشب سولزلایک است</div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="user" style="color:#58a6ff">soul_fan</span></bdi>: <bdi dir="ltr">this boss fight is insane 🔥</bdi></div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="badge vip">VIP</span><span class="user" style="color:#f472b6">nightowl</span></bdi>: چت فارسی و انگلیسی قاطی هم خوب درمیاد، <bdi dir="ltr">great stream!</bdi></div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="user" style="color:#a78bfa">long_reader</span></bdi>: این یک پیام طولانی است برای اینکه ببینیم متن بلند چندخطی چطور می‌شکند و فاصله‌ی خطوط و داخل پیام چقدر خواناست، مخصوصاً وقتی وسطش یک عبارت انگلیسی مثل <bdi dir="ltr">boss fight</bdi> هم باشد و آخرش علامت تعجب!</div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="user" style="color:#fbbf24">emote_king</span></bdi>: این ایموت‌ها چطور دیده می‌شوند؟ <img class="emote" src="${emoteSvg}" alt="KEKW" /> <img class="emote" src="${emoteSvg}" alt="Pog" /></div>`,
+        ]
+      : [
+          `<div class="msg" dir="${msgDir}"><bdi><span class="badge moderator">${mod}</span><span class="user" style="color:#4ade80">tahaa</span></bdi>: Hey everyone! Tonight we play a soulslike</div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="user" style="color:#58a6ff">soul_fan</span></bdi>: this boss fight is insane 🔥</div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="badge vip">VIP</span><span class="user" style="color:#f472b6">nightowl</span></bdi>: Persian and English chat mix nicely, great stream!</div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="user" style="color:#a78bfa">long_reader</span></bdi>: This is a long message to check how multi-line text wraps, how line height and padding read, especially with a Persian phrase in the middle like سلام به همه and an exclamation mark at the end!</div>`,
+          `<div class="msg" dir="${msgDir}"><bdi><span class="user" style="color:#fbbf24">emote_king</span></bdi>: How do these emotes look? <img class="emote" src="${emoteSvg}" alt="KEKW" /> <img class="emote" src="${emoteSvg}" alt="Pog" /></div>`,
+        ];
+    const extra = previewExtra.map((m) => `<div class="msg" dir="${msgDir}"><bdi><span class="user" style="color:#4ade80">test_user</span></bdi>: ${m}</div>`).join("");
+    return `<!doctype html><html dir="${dir}"><head>${head}</head><body><div id="pinned"><div class="msg" dir="${msgDir}"><bdi><span class="badge moderator">${mod}</span><span class="user" style="color:#4ade80">tahaa</span></bdi>: ${fa ? "این پیام پین‌شده است" : "This message is pinned"}</div></div><div id="messages">${samples.join("")}${extra}</div></body></html>`;
   }
-  const unit = lang === "fa" ? "تومان" : "Toman";
-  return `<!doctype html><html dir="${dir}"><head>${head}</head><body><div id="goal"><div class="title">${lang === "fa" ? "ارتقا استریم" : "Stream upgrade"}</div><div class="values"><span>${fmt.format(12500000)}</span> ${lang === "fa" ? "از" : "of"} <span>${fmt.format(30000000)}</span> <span>${unit}</span> — <span>${fmt.format(42)}٪</span></div><div class="bar"><div class="fill" style="width:42%"></div></div><div id="goalError"></div></div></body></html>`;
+  const dir = pageDir(display.goalDir);
+  const digitsLocale = display.digits === "fa" ? "fa-IR" : display.digits === "en" ? "en-US" : lang === "fa" ? "fa-IR" : "en-US";
+  const fmt = new Intl.NumberFormat(digitsLocale);
+  const unit = display.goalUnit === "custom" && display.goalUnitCustom.trim()
+    ? display.goalUnitCustom.trim()
+    : lang === "fa" ? "تومان" : "Toman";
+  const pctSign = lang === "fa" ? "٪" : "%";
+  return `<!doctype html><html dir="${dir}"><head>${head}</head><body><div id="goal"><div class="title">${lang === "fa" ? "ارتقا استریم" : "Stream upgrade"}</div><div class="stats"><div class="stat cur"><span class="lbl">${t.goalStatCurrent}</span><span class="val"><span>${fmt.format(12500000)}</span> <span>${unit}</span></span></div><div class="stat tgt"><span class="lbl">${t.goalStatTarget}</span><span class="val"><span>${fmt.format(30000000)}</span> <span>${unit}</span></span></div><div class="stat pct"><span class="lbl">${t.goalStatPct}</span><span class="val">${fmt.format(42)}${pctSign}</span></div></div><div class="bar"><div class="fill" style="width:42%"></div></div><div id="goalError"></div></div></body></html>`;
 }
 
 function updatePreview(): void {
@@ -1161,8 +1648,10 @@ function scheduleThemeSave(): void {
   if (!isTauri) {
     themesDoc.profiles[currentProfile] = theme;
     localStorage.setItem("rechat-themes", JSON.stringify(themesDoc));
+    showSaved();
     return;
   }
+  showSaved();
   clearTimeout(themeSaveTimer);
   themeSaveTimer = setTimeout(() => {
     void invoke("save_theme", { profile: currentProfile, theme }).catch(() => undefined);
@@ -1171,6 +1660,7 @@ function scheduleThemeSave(): void {
 
 for (const id of [
   "thChatSize", "thChatOpacity", "thChatText", "thChatRadius", "thChatGap",
+  "thLineHeight", "thMsgPad",
   "thBadges", "thUserColor", "thMaxMsg", "thGoalTitle", "thGoalC1",
   "thGoalC2", "thGoalH", "thGoalValues",
 ]) {
@@ -1180,6 +1670,147 @@ for (const id of [
     scheduleThemeSave();
   });
 }
+
+// ---------- M9: save indicator ----------
+let saveIndTimer: ReturnType<typeof setTimeout> | undefined;
+function showSaved(): void {
+  const el = $("saveIndicator");
+  el.textContent = dict[lang].saved;
+  clearTimeout(saveIndTimer);
+  saveIndTimer = setTimeout(() => (el.textContent = ""), 2000);
+}
+
+// ---------- M9: per-section reset (with confirmation) ----------
+function confirmReset(): boolean {
+  return window.confirm(dict[lang].resetConfirm);
+}
+$("resetFiltersBtn").addEventListener("click", () => {
+  if (!confirmReset()) return;
+  applyFiltersToUi({ hide_commands: false, hidden_users: [], hidden_words: [], hidden_bots: [] });
+  scheduleFilterSave();
+  showToast(dict[lang].resetDone);
+});
+$("resetChatBtn").addEventListener("click", () => {
+  if (!confirmReset()) return;
+  const d = defaultTheme();
+  const cur = themeFromControls();
+  loadThemeIntoControls({
+    ...cur,
+    chat_font_size: d.chat_font_size, chat_bg_opacity: d.chat_bg_opacity,
+    chat_text_color: d.chat_text_color, chat_radius: d.chat_radius,
+    chat_gap: d.chat_gap, chat_line_height: d.chat_line_height,
+    chat_msg_padding: d.chat_msg_padding, show_badges: d.show_badges,
+    show_username_color: d.show_username_color, max_messages: d.max_messages,
+  });
+  updatePreview();
+  scheduleThemeSave();
+  showToast(dict[lang].resetDone);
+});
+$("resetGoalBtn").addEventListener("click", () => {
+  if (!confirmReset()) return;
+  const d = defaultTheme();
+  const cur = themeFromControls();
+  loadThemeIntoControls({
+    ...cur,
+    goal_title_size: d.goal_title_size, goal_bar_c1: d.goal_bar_c1,
+    goal_bar_c2: d.goal_bar_c2, goal_bar_height: d.goal_bar_height,
+    show_goal_values: d.show_goal_values,
+  });
+  updatePreview();
+  scheduleThemeSave();
+  showToast(dict[lang].resetDone);
+});
+$("resetCssBtn").addEventListener("click", () => {
+  if (!confirmReset()) return;
+  cssTa.value = "";
+  afterCssEdit();
+  showToast(dict[lang].resetDone);
+});
+
+// ---------- M9: settings search (filters cards on the active page) ----------
+function applySearch(): void {
+  const q = ($("settingsSearch") as HTMLInputElement).value.trim().toLowerCase();
+  const active = document.querySelector<HTMLElement>(".page:not([hidden])");
+  if (!active) return;
+  let visible = 0;
+  for (const card of active.querySelectorAll<HTMLElement>(".card")) {
+    const match = !q || (card.textContent ?? "").toLowerCase().includes(q);
+    card.style.display = match ? "" : "none";
+    if (match) visible++;
+  }
+  ($("searchEmpty").classList.toggle("show", q !== "" && visible === 0));
+}
+$("settingsSearch").addEventListener("input", applySearch);
+
+// ---------- M9: first-run onboarding wizard ----------
+const onboardBackdrop = $("onboardBackdrop");
+function showWizard(step: number): void {
+  for (const s of document.querySelectorAll<HTMLElement>(".wizard-step")) {
+    s.hidden = Number(s.dataset.step) !== step;
+  }
+  for (const d of document.querySelectorAll<HTMLElement>(".wizard-dots span")) {
+    d.classList.toggle("on", Number(d.dataset.dot) === step);
+  }
+  onboardBackdrop.hidden = false;
+}
+function closeWizard(): void {
+  onboardBackdrop.hidden = true;
+  localStorage.setItem("rechat-onboarded", "1");
+}
+$("wizConnectBtn").addEventListener("click", () => {
+  const wizChannel = $<HTMLInputElement>("wizChannel");
+  const v = wizChannel.value.trim();
+  if (!v) {
+    wizChannel.classList.add("invalid");
+    return;
+  }
+  wizChannel.classList.remove("invalid");
+  channelInput.value = v;
+  ($("connectBtn") as HTMLButtonElement).click();
+  showWizard(2);
+});
+$("wizSkipBtn").addEventListener("click", closeWizard);
+$("wizSkip2Btn").addEventListener("click", closeWizard);
+$("wizBack2Btn").addEventListener("click", () => showWizard(1));
+$("wizNext2Btn").addEventListener("click", () => showWizard(3));
+$("wizBack3Btn").addEventListener("click", () => showWizard(2));
+$("wizFinishBtn").addEventListener("click", closeWizard);
+$("wizCopyChatBtn").addEventListener("click", (e) => void copyText(chatUrl.value, e.currentTarget as HTMLButtonElement));
+$("wizCopyGoalBtn").addEventListener("click", (e) => void copyText(goalUrl.value, e.currentTarget as HTMLButtonElement));
+$("reopenOnboardBtn").addEventListener("click", () => showWizard(1));
+
+// ---------- M9: display settings controls ----------
+function loadDisplayIntoControls(): void {
+  ($("thChatDir") as HTMLSelectElement).value = display.chatDir;
+  ($("thGoalDir") as HTMLSelectElement).value = display.goalDir;
+  ($("thDigits") as HTMLSelectElement).value = display.digits;
+  ($("thGoalUnit") as HTMLSelectElement).value = display.goalUnit;
+  ($("thGoalUnitCustom") as HTMLInputElement).value = display.goalUnitCustom;
+  const customLab = ($("thGoalUnitCustom") as HTMLInputElement).closest("label");
+  if (customLab) (customLab as HTMLElement).style.display = display.goalUnit === "custom" ? "" : "none";
+}
+($("thChatDir") as HTMLSelectElement).addEventListener("change", (e) => {
+  display.chatDir = (e.currentTarget as HTMLSelectElement).value;
+  saveDisplay();
+});
+($("thGoalDir") as HTMLSelectElement).addEventListener("change", (e) => {
+  display.goalDir = (e.currentTarget as HTMLSelectElement).value;
+  saveDisplay();
+});
+($("thDigits") as HTMLSelectElement).addEventListener("change", (e) => {
+  display.digits = (e.currentTarget as HTMLSelectElement).value;
+  saveDisplay();
+});
+($("thGoalUnit") as HTMLSelectElement).addEventListener("change", (e) => {
+  display.goalUnit = (e.currentTarget as HTMLSelectElement).value;
+  const customLab = ($("thGoalUnitCustom") as HTMLInputElement).closest("label");
+  if (customLab) (customLab as HTMLElement).style.display = display.goalUnit === "custom" ? "" : "none";
+  saveDisplay();
+});
+($("thGoalUnitCustom") as HTMLInputElement).addEventListener("input", (e) => {
+  display.goalUnitCustom = (e.currentTarget as HTMLInputElement).value;
+  saveDisplay();
+});
 
 profileSel.addEventListener("change", () => {
   currentProfile = profileSel.value;
@@ -1314,10 +1945,7 @@ async function copyText(text: string, btn: HTMLButtonElement): Promise<void> {
   setTimeout(() => (btn.textContent = prev), 1500);
 }
 function profileQuery(): string {
-  const parts: string[] = [];
-  if (currentProfile !== "default") parts.push(`profile=${encodeURIComponent(currentProfile)}`);
-  parts.push(`lang=${lang}`);
-  return `?${parts.join("&")}`;
+  return `?${overlayParams(currentProfile)}`;
 }
 $("copyChatProfileBtn").addEventListener("click", (e) => {
   void copyText(`${base}/chat${profileQuery()}`, e.currentTarget as HTMLButtonElement);
@@ -1411,5 +2039,7 @@ $("quitBtn").addEventListener("click", () => {
 if (autoUpdateChk.checked) void runUpdateCheck(false);
 
 applyLang();
+loadDisplayIntoControls();
 void loadBaseCss();
 void reloadThemes();
+if (!localStorage.getItem("rechat-onboarded")) showWizard(1);

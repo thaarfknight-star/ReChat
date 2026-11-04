@@ -7,24 +7,41 @@ const demo = params.get("demo") === "1";
 const profile = params.get("profile");
 if (profile) document.body.dataset.profile = profile;
 // Overlay language comes from the ?lang= param the settings window
-// appends to the overlay link (M8 bilingual overlays).
+// appends to the overlay link (M8 bilingual overlays). Display options
+// (M9) ride the same link: ?goald=rtl|ltr|auto, ?digits=fa|en|auto,
+// ?unit=<custom text> (empty = from Donofa).
 const overlayLang = params.get("lang") === "en" ? "en" : "fa";
 document.documentElement.lang = overlayLang;
-document.documentElement.dir = overlayLang === "fa" ? "rtl" : "ltr";
+const goalDir = params.get("goald");
+document.documentElement.dir =
+  goalDir === "rtl" ? "rtl" : goalDir === "ltr" ? "ltr" : overlayLang === "fa" ? "rtl" : "ltr";
+const digitsOpt = params.get("digits");
+const digitsLocale =
+  digitsOpt === "fa" ? "fa-IR" : digitsOpt === "en" ? "en-US" : overlayLang === "fa" ? "fa-IR" : "en-US";
+const customUnit = params.get("unit") ?? "";
 
 const titleEl = document.querySelector("#goal .title") as HTMLDivElement;
 const currentEl = document.getElementById("current") as HTMLSpanElement;
 const targetEl = document.getElementById("target") as HTMLSpanElement;
 const unitEl = document.getElementById("unit") as HTMLSpanElement;
+const unit2El = document.getElementById("unit2") as HTMLSpanElement;
 const pctEl = document.getElementById("pct") as HTMLSpanElement;
 const fill = document.getElementById("fill") as HTMLDivElement;
 const errorEl = document.getElementById("goalError") as HTMLDivElement;
 
-const fmt = new Intl.NumberFormat(overlayLang === "fa" ? "fa-IR" : "en-US");
+const lblCurrent = document.getElementById("lblCurrent") as HTMLSpanElement;
+const lblTarget = document.getElementById("lblTarget") as HTMLSpanElement;
+const lblPct = document.getElementById("lblPct") as HTMLSpanElement;
+lblCurrent.textContent = overlayLang === "fa" ? "فعلی" : "Raised";
+lblTarget.textContent = overlayLang === "fa" ? "هدف" : "Target";
+lblPct.textContent = overlayLang === "fa" ? "پیشرفت" : "Progress";
+
+const fmt = new Intl.NumberFormat(digitsLocale);
 // The server's unit labels are Persian (its Donofa map); translate the
 // known ones for the English overlay instead of changing the API.
 const unitMap: Record<string, string> = { "تومان": "Toman", "دلار": "USD", "یورو": "EUR" };
 function unitLabel(label: string): string {
+  if (customUnit) return customUnit;
   return overlayLang === "en" ? (unitMap[label] ?? label) : label;
 }
 
@@ -46,9 +63,18 @@ function render(s: GoalStatus): void {
     titleEl.textContent = g.title;
     currentEl.textContent = fmt.format(Math.round(g.current));
     targetEl.textContent = fmt.format(Math.round(g.total));
-    unitEl.textContent = unitLabel(g.unit_label);
+    const u = unitLabel(g.unit_label);
+    unitEl.textContent = u;
+    unit2El.textContent = u;
     pctEl.textContent = `${fmt.format(Math.round(g.pct))}${overlayLang === "fa" ? "٪" : "%"}`;
-    fill.style.width = `${g.pct}%`;
+    // Subtle bump on value change (CSS transition already animates width).
+    const w = `${g.pct}%`;
+    if (fill.style.width !== w) {
+      fill.style.width = w;
+      fill.classList.remove("bump");
+      void fill.offsetWidth;
+      fill.classList.add("bump");
+    }
   }
   if (s.state === "error") {
     errorEl.textContent = s.detail

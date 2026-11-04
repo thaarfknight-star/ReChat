@@ -1,8 +1,11 @@
 /* Overlay pages: fully transparent, light, smooth. Served by the
-   Rust localhost server and added in Meld as a Browser Source. */
+   Rust localhost server and added in Meld as a Browser Source.
+   Font: Vazirmatn bundled locally (no network dependency). */
+@font-face { font-family: "Vazirmatn"; src: url("./assets/fonts/vazirmatn-arabic-var.woff2") format("woff2"); font-weight: 100 900; font-display: swap; unicode-range: U+0600-06FF, U+0750-077F, U+0870-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC, U+102E0-102FB, U+10E60-10E7E, U+10EC2-10EC7, U+10EC9-10EEE, U+10EF0-10EFF, U+1EE00-1EE03, U+1EE05-1EE1F, U+1EE21-1EE22, U+1EE24, U+1EE27, U+1EE29-1EE32, U+1EE34-1EE37, U+1EE39, U+1EE3B, U+1EE42, U+1EE47, U+1EE49, U+1EE4B, U+1EE4D-1EE4F, U+1EE51-1EE52, U+1EE54, U+1EE57, U+1EE59, U+1EE5B, U+1EE5D, U+1EE5F, U+1EE61-1EE62, U+1EE64, U+1EE67-1EE6A, U+1EE6C-1EE72, U+1EE74-1EE77, U+1EE79-1EE7C, U+1EE7E, U+1EE80-1EE89, U+1EE8B-1EE9B, U+1EEA1-1EEA3, U+1EEA5-1EEA9, U+1EEAB-1EEBB, U+1EEF0-1EEF1; }
+@font-face { font-family: "Vazirmatn"; src: url("./assets/fonts/vazirmatn-latin-var.woff2") format("woff2"); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: transparent !important; overflow: hidden; }
-body { font-family: Tahoma, "Segoe UI", sans-serif; color: var(--chat-text, #fff); }
+body { font-family: "Vazirmatn", Tahoma, "Segoe UI", sans-serif; color: var(--chat-text, #fff); }
 
 /* ---- chat ---- */
 #chatStatus { font-size: 12px; color: rgba(255,255,255,.65); text-shadow: 0 1px 4px rgba(0,0,0,.8); padding: 8px 12px 0; }
@@ -10,10 +13,13 @@ body { font-family: Tahoma, "Segoe UI", sans-serif; color: var(--chat-text, #fff
 #pinned:empty { display: none; }
 #pinned .msg { border: 1px solid rgba(250, 204, 21, .6); }
 #messages { display: flex; flex-direction: column; gap: var(--chat-gap, 8px); padding: 12px; }
-.msg { background: rgb(0 0 0 / var(--chat-bg-opacity, 0.55)); border-radius: var(--chat-radius, 10px); padding: 8px 12px;
-  font-size: var(--chat-font-size, 18px); line-height: 1.7; animation: msg-in 0.35s ease; }
+/* unicode-bidi: plaintext lets each message follow its own first strong
+   character, and Latin runs inside are wrapped in <bdi> by chat.ts, so
+   mixed Persian/English punctuation stays where it belongs. */
+.msg { background: rgb(0 0 0 / var(--chat-bg-opacity, 0.55)); border-radius: var(--chat-radius, 10px); padding: var(--chat-msg-padding, 10px) 12px;
+  font-size: var(--chat-font-size, 18px); line-height: var(--chat-line-height, 1.7); unicode-bidi: plaintext; animation: msg-in 0.35s ease; overflow-wrap: anywhere; }
 @keyframes msg-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.msg .user { font-weight: 800; }
+.msg .user { font-weight: 800; unicode-bidi: isolate; }
 .msg .badge { display: inline-block; font-size: 11px; background: #e11d48; border-radius: 4px; padding: 1px 6px; margin-inline-end: 6px; vertical-align: middle; }
 .msg .badge.mod, .msg .badge.moderator { background: #16a34a; }
 .msg .badge.vip { background: #9333ea; }
@@ -24,14 +30,26 @@ body { font-family: Tahoma, "Segoe UI", sans-serif; color: var(--chat-text, #fff
 .msg .badge.verified { background: #06b6d4; }
 .msg .badge.staff { background: #f97316; }
 .msg .badge.sub_gifter { background: #ec4899; }
-.msg .badge-img { height: 1.2em; vertical-align: middle; margin-inline-end: 4px; }
-.msg .emote { height: 1.5em; vertical-align: middle; }
+.msg .badge-img { height: 1.2em; vertical-align: -0.2em; margin-inline-end: 4px; }
+.msg .emote { height: 1.2em; vertical-align: -0.2em; }
 
 /* ---- goal ---- */
 #goal { padding: 16px; }
-#goal .title { font-size: var(--goal-title-size, 20px); font-weight: 800; margin-bottom: 4px; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+#goal .title { font-size: var(--goal-title-size, 20px); font-weight: 800; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+#goal .stats { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+#goal .stat { display: flex; flex-direction: column; gap: 2px; }
+#goal .stat .lbl { font-size: 12px; opacity: .75; }
+#goal .stat .val { font-size: 20px; font-weight: 800; line-height: 1.3; }
+#goal .stat.pct .val { font-size: 26px; color: var(--goal-c2, #4ade80); }
+/* Back-compat: old one-line values markup (the settings preview never uses
+   it anymore, but a stale cached page still renders readably). */
 #goal .values { font-size: 16px; margin-bottom: 10px; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
 #goal .bar { height: var(--goal-bar-h, 22px); background: rgba(0,0,0,.55); border-radius: 999px; overflow: hidden; }
-#goal .fill { height: 100%; background: linear-gradient(90deg, var(--goal-c1, #16a34a), var(--goal-c2, #4ade80)); border-radius: 999px; transition: width 0.8s ease; }
+/* margin-inline-start: 0 pins the fill to the inline start edge, so it
+   grows from the right in Persian (RTL) and from the left in English. */
+#goal .fill { height: 100%; margin-inline-start: 0; margin-inline-end: auto; background: linear-gradient(90deg, var(--goal-c1, #16a34a), var(--goal-c2, #4ade80)); border-radius: 999px; transition: width 0.6s ease; }
+#goal .fill.bump { animation: fill-bump 0.6s ease; }
+@keyframes fill-bump { 0% { filter: brightness(1.6); } 100% { filter: brightness(1); } }
 #goalError { font-size: 13px; color: #fca5a5; text-shadow: 0 1px 4px rgba(0,0,0,.8); margin-top: 8px; }
 #goalError:empty { display: none; }
+#goalEmpty { font-size: 14px; color: rgba(255,255,255,.75); text-shadow: 0 1px 4px rgba(0,0,0,.8); padding: 16px; }

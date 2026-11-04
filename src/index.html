@@ -13,6 +13,10 @@
       <h1>ReChat</h1>
       <p id="tagline">چت و Goal کیک، برای Meld Studio</p>
     </div>
+    <div class="hdr-status" role="status">
+      <span id="hdrKickStatus" class="pill"><span class="dot idle"></span><span>وصل نیست</span></span>
+      <span id="hdrGoalStatus" class="pill"><span class="dot idle"></span><span>تنظیم نشده</span></span>
+    </div>
     <button id="langBtn" class="secondary">English</button>
   </header>
   <nav id="mainNav">
@@ -20,78 +24,102 @@
     <button data-page="customize" id="navCustomize">شخصی‌سازی</button>
     <button data-page="guide" id="navGuide">راهنمای Meld</button>
     <button data-page="settings" id="navSettings">تنظیمات برنامه</button>
+    <input id="settingsSearch" type="search" placeholder="جست‌وجو در تنظیمات…" aria-label="جست‌وجو در تنظیمات" />
   </nav>
   <div class="shell" id="shell">
     <main id="mainCol">
+      <div id="searchEmpty" class="search-empty">چیزی پیدا نشد.</div>
       <!-- ===== اتصال ===== -->
       <section class="page" id="page-connect">
         <section class="card">
-          <h2 id="kickAutoTitle">اتصال خودکار با Kick</h2>
-          <p id="kickAutoNote" class="muted">با حساب کیک خودت وارد شو تا ReChat خودش کانالت را پیدا کند و چت را وصل کند؛ دیگر لازم نیست لینک کانال بدهی.</p>
-          <label id="kickClientIdLabel" for="kickClientId">Client ID برنامه‌ی Kick</label>
-          <input id="kickClientId" type="text" placeholder="مثال: 01K…" />
-          <label id="kickSecretLabel" for="kickSecret">Client Secret برنامه‌ی Kick</label>
-          <input id="kickSecret" type="password" placeholder="خالی بماند یعنی قبلی حفظ شود" />
-          <div class="row" style="margin-top:10px">
-            <button id="kickSaveBtn" class="secondary">ذخیره</button>
-            <span id="kickSavedNote" class="muted"></span>
+          <div class="card-head">
+            <h2 id="connTitle">اتصال کیک</h2>
+            <span id="chatStatus" class="pill"><span class="dot idle"></span><span>وصل نیست</span></span>
           </div>
-          <details>
-            <summary id="kickGuideSummary">راهنمای ساخت برنامه‌ی Kick</summary>
-            <p id="kickGuideText" class="muted">در kick.com وارد شو، به Settings → Developer برو و یک برنامه بساز؛ Redirect URI را دقیقاً http://localhost:17874/oauth/callback بگذار و اسکوپ‌های user:read و channel:read را بده. بعد Client ID و Client Secret را اینجا ذخیره کن و «اتصال با Kick» را بزن؛ مرورگر باز می‌شود، دسترسی را تأیید می‌کنی و چت خودکار وصل می‌شود. این دو مقدار فقط روی همین سیستم می‌ماند.</p>
-          </details>
-          <div class="row" style="margin-top:12px">
-            <button id="kickConnectBtn">اتصال با Kick</button>
-            <button id="kickDisconnectBtn" class="secondary">قطع اتصال Kick</button>
-            <span id="kickStatus" class="pill">وصل نیست</span>
+          <p id="connNote" class="hint">یک حالت را انتخاب کن؛ ساده‌ترین حالت «نام کانال» است و بدون هیچ تنظیم اضافه‌ای کار می‌کند.</p>
+          <div class="seg" role="tablist">
+            <button type="button" data-mode="channel" class="active" id="modeChannelBtn">نام کانال (ساده)</button>
+            <button type="button" data-mode="oauth" id="modeOauthBtn">ورود با Kick (پیشنهادی)</button>
+          </div>
+          <div id="pane-channel">
+            <label id="channelLabel" for="channelInput">نام کانال یا لینک کانال</label>
+            <input id="channelInput" type="text" class="ltr-input" placeholder="kick.com/tahaa" autocomplete="off" />
+            <div id="channelError" class="field-error" role="alert"></div>
+            <div class="row" style="margin-top:6px">
+              <button id="connectBtn" class="primary">اتصال</button>
+              <button id="disconnectBtn" class="secondary">قطع اتصال</button>
+            </div>
+            <p id="chatNote" class="hint">پیام‌های زنده‌ی کانال در اورلی نمایش داده می‌شوند.</p>
+          </div>
+          <div id="pane-oauth" hidden>
+            <p id="kickOauthState" class="hint">وصل نیست.</p>
+            <div class="row" style="margin-top:6px">
+              <button id="kickConnectBtn" class="primary">اتصال با Kick</button>
+              <button id="kickDisconnectBtn" class="secondary">قطع اتصال Kick</button>
+            </div>
+            <details style="margin-top:14px">
+              <summary id="kickAdvancedSummary">پیشرفته: Client ID و Client Secret</summary>
+              <p id="kickAdvancedNote" class="hint">برای ورود با Kick باید یک بار در Kick برنامه بسازی و این دو مقدار را اینجا ذخیره کنی؛ فقط روی همین سیستم می‌مانند.</p>
+              <label id="kickClientIdLabel" for="kickClientId">Client ID برنامه‌ی Kick</label>
+              <input id="kickClientId" type="text" class="ltr-input" placeholder="مثال: 01K…" autocomplete="off" />
+              <label id="kickSecretLabel" for="kickSecret" style="margin-top:10px">Client Secret برنامه‌ی Kick</label>
+              <input id="kickSecret" type="password" class="ltr-input" placeholder="خالی بماند یعنی قبلی حفظ شود" autocomplete="off" />
+              <div class="row" style="margin-top:10px">
+                <button id="kickSaveBtn" class="secondary">ذخیره</button>
+                <span id="kickSavedNote" class="muted"></span>
+              </div>
+              <details style="margin-top:10px">
+                <summary id="kickGuideSummary">راهنمای ساخت برنامه‌ی Kick</summary>
+                <p id="kickGuideText" class="muted">در kick.com وارد شو، به Settings → Developer برو و یک برنامه بساز؛ Redirect URI را دقیقاً http://localhost:17874/oauth/callback بگذار و اسکوپ‌های user:read و channel:read را بده. بعد Client ID و Client Secret را اینجا ذخیره کن و «اتصال با Kick» را بزن؛ مرورگر باز می‌شود، دسترسی را تأیید می‌کنی و چت خودکار وصل می‌شود.</p>
+              </details>
+            </details>
           </div>
         </section>
         <section class="card">
-          <h2 id="chatTitle">چت کیک</h2>
-          <label id="channelLabel" for="channelInput">نام کانال یا لینک کانال (روش دستی، وقتی اتصال خودکار تنظیم نشده)</label>
-          <input id="channelInput" type="text" placeholder="kick.com/tahaa" />
-          <div class="row" style="margin-top:12px">
-            <button id="connectBtn">اتصال</button>
-            <button id="disconnectBtn" class="secondary">قطع اتصال</button>
-            <span id="chatStatus" class="pill">وصل نیست</span>
+          <div class="card-head">
+            <h2 id="filtersTitle">فیلترهای چت</h2>
+            <button id="resetFiltersBtn" class="ghost small">بازنشانی</button>
           </div>
-          <p id="chatNote" class="muted">پیام‌های زنده‌ی کانال در اورلی نمایش داده می‌شوند.</p>
+          <label class="switch"><input id="hideCmdChk" type="checkbox" /><span class="track" aria-hidden="true"></span><span id="hideCmdLabel">دستورها را پنهان کن (پیام‌های شروع‌شونده با !)</span></label>
+          <label id="usersLabel" for="usersChipInput" style="margin-top:14px">کاربران پنهان</label>
+          <div class="chip-box" id="usersChips"><input id="usersChipInput" type="text" placeholder="nightbot" autocomplete="off" /></div>
+          <label id="botsLabel" for="botsChipInput" style="margin-top:12px">بات‌ها</label>
+          <div class="chip-box" id="botsChips"><input id="botsChipInput" type="text" placeholder="streamlabs" autocomplete="off" /></div>
+          <label id="wordsLabel" for="wordsChipInput" style="margin-top:12px">کلمه‌های پنهان</label>
+          <div class="chip-box" id="wordsChips"><input id="wordsChipInput" type="text" placeholder="" autocomplete="off" /></div>
+          <p id="filtersNote" class="hint">برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.</p>
         </section>
         <section class="card">
-          <h2 id="filtersTitle">فیلترهای چت</h2>
-          <label><input id="hideCmdChk" type="checkbox" /> <span id="hideCmdLabel">دستورها را پنهان کن (پیام‌های شروع‌شونده با !)</span></label>
-          <label id="usersLabel" for="usersTa" style="margin-top:10px">کاربران پنهان (هر خط یک نام)</label>
-          <textarea id="usersTa" rows="2" placeholder="nightbot"></textarea>
-          <label id="botsLabel" for="botsTa" style="margin-top:10px">بات‌ها (هر خط یک نام)</label>
-          <textarea id="botsTa" rows="2" placeholder="streamlabs"></textarea>
-          <label id="wordsLabel" for="wordsTa" style="margin-top:10px">کلمه‌های پنهان (هر خط یک کلمه)</label>
-          <textarea id="wordsTa" rows="2"></textarea>
-          <p id="filtersNote" class="muted">فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.</p>
-        </section>
-        <section class="card">
-          <h2 id="goalTitle">Goal</h2>
+          <div class="card-head">
+            <h2 id="goalTitle">Goal</h2>
+            <span id="goalStatus" class="pill"><span class="dot idle"></span><span>تنظیم نشده</span></span>
+          </div>
           <label id="goalLabel" for="goalInput">لینک Goal</label>
-          <input id="goalInput" type="text" placeholder="https://…" />
-          <div class="row" style="margin-top:12px">
-            <button id="goalSaveBtn">ذخیره</button>
-            <span id="goalStatus" class="pill">تنظیم نشده</span>
+          <input id="goalInput" type="text" class="ltr-input" placeholder="https://…" autocomplete="off" />
+          <div id="goalErrorText" class="field-error" role="alert"></div>
+          <div class="row" style="margin-top:6px">
+            <button id="goalSaveBtn" class="primary">ذخیره</button>
           </div>
-          <p id="goalNote" class="muted">Goal زنده از لینک Donofa خوانده می‌شود؛ هر ۱۰ ثانیه تازه می‌شود.</p>
+          <p id="goalNote" class="hint">Goal زنده از لینک Donofa خوانده می‌شود؛ هر ۱۰ ثانیه تازه می‌شود.</p>
         </section>
         <section class="card">
           <h2 id="overlayTitle">لینک‌های اورلی (سرور محلی)</h2>
           <label>چت</label>
-          <div class="row"><input id="chatUrl" type="text" readonly /><button id="copyChatBtn" class="secondary">کپی لینک</button></div>
-          <label>Goal</label>
-          <div class="row"><input id="goalUrl" type="text" readonly /><button id="copyGoalBtn" class="secondary">کپی لینک</button></div>
-          <p id="overlayNote" class="muted">این لینک‌ها را در Meld به‌عنوان Browser Source اضافه کنید.</p>
+          <div class="row"><input id="chatUrl" type="text" class="ltr-input" readonly /><button id="copyChatBtn" class="secondary">کپی لینک</button><button id="openChatBtn" class="secondary">باز کردن</button><button id="testChatBtn" class="secondary">تست</button></div>
+          <label style="margin-top:10px">Goal</label>
+          <div class="row"><input id="goalUrl" type="text" class="ltr-input" readonly /><button id="copyGoalBtn" class="secondary">کپی لینک</button><button id="openGoalBtn" class="secondary">باز کردن</button><button id="testGoalBtn" class="secondary">تست</button></div>
+          <p id="overlayNote" class="hint">این لینک‌ها را در Meld به‌عنوان Browser Source اضافه کن. دکمه‌ی «تست» نسخه‌ی نمونه را در مرورگر باز می‌کند.</p>
+          <div class="row"><button id="guideLinkBtn" class="ghost">راهنمای افزودن به Meld ←</button></div>
         </section>
       </section>
 
       <!-- ===== شخصی‌سازی ===== -->
       <section class="page" id="page-customize" hidden>
         <section class="card">
-          <h2 id="customTitle">شخصی‌سازی و پروفایل‌ها</h2>
+          <div class="card-head">
+            <h2 id="customTitle">شخصی‌سازی و پروفایل‌ها</h2>
+            <span id="saveIndicator" class="muted"></span>
+          </div>
           <label id="profileLabel" for="profileSel">پروفایل صحنه</label>
           <div class="row">
             <select id="profileSel"></select>
@@ -108,7 +136,7 @@
             <button id="importBtn" class="secondary">ورودی JSON</button>
           </div>
           <textarea id="ioTa" rows="3" placeholder="JSON پروفایل‌ها برای ورودی/خروجی"></textarea>
-          <p id="profileNote" class="muted">هر پروفایل لینک اورلی خودش را دارد: /chat?profile=نام و /goal?profile=نام — همان لینک را در Meld بگذارید.</p>
+          <p id="profileNote" class="hint">هر پروفایل لینک اورلی خودش را دارد: /chat?profile=نام و /goal?profile=نام — همان لینک را در Meld بگذارید.</p>
           <div class="row" style="margin-top:6px">
             <button id="copyChatProfileBtn" class="secondary">کپی لینک چت این پروفایل</button>
             <button id="copyGoalProfileBtn" class="secondary">کپی لینک Goal این پروفایل</button>
@@ -124,9 +152,13 @@
               <label>گردی گوشه (px)<input id="thChatRadius" type="number" min="0" max="40" /></label>
               <label>فاصله‌ی پیام‌ها (px)<input id="thChatGap" type="number" min="0" max="40" /></label>
               <label>بیشترین پیام روی صفحه<input id="thMaxMsg" type="number" min="5" max="200" /></label>
+              <label>فاصله‌ی خطوط<input id="thLineHeight" type="number" min="1.2" max="2.2" step="0.05" /></label>
+              <label>فاصله‌ی داخل پیام (px)<input id="thMsgPad" type="number" min="0" max="32" /></label>
+              <label>جهت چت<select id="thChatDir"><option value="auto">خودکار</option><option value="rtl">راست‌به‌چپ</option><option value="ltr">چپ‌به‌راست</option></select></label>
             </div>
-            <label><input id="thBadges" type="checkbox" /> بج‌ها نشان داده شوند</label>
-            <label><input id="thUserColor" type="checkbox" /> رنگ نام کاربر از کیک بیاید</label>
+            <label class="switch" style="margin-top:12px"><input id="thBadges" type="checkbox" /><span class="track" aria-hidden="true"></span><span>بج‌ها نشان داده شوند</span></label>
+            <label class="switch" style="margin-top:10px"><input id="thUserColor" type="checkbox" /><span class="track" aria-hidden="true"></span><span>رنگ نام کاربر از کیک بیاید</span></label>
+            <div class="row" style="margin-top:14px"><button id="resetChatBtn" class="ghost small">بازنشانی چت</button></div>
           </div>
         </section>
         <section class="card acc">
@@ -137,14 +169,19 @@
               <label>ارتفاع نوار (px)<input id="thGoalH" type="number" min="8" max="60" /></label>
               <label>رنگ شروع نوار<input id="thGoalC1" type="color" /></label>
               <label>رنگ پایان نوار<input id="thGoalC2" type="color" /></label>
+              <label>جهت نوار<select id="thGoalDir"><option value="auto">هم‌جهت با زبان</option><option value="rtl">راست‌به‌چپ</option><option value="ltr">چپ‌به‌راست</option></select></label>
+              <label>رقم‌ها<select id="thDigits"><option value="auto">هم‌جهت با زبان</option><option value="fa">فارسی (۱۲۳۴۵۶۷۸۹۰)</option><option value="en">انگلیسی (1234567890)</option></select></label>
+              <label>واحد پول<select id="thGoalUnit"><option value="auto">از Donofa</option><option value="custom">دلخواه…</option></select></label>
+              <label>واحد دلخواه<input id="thGoalUnitCustom" type="text" placeholder="تومان" /></label>
             </div>
-            <label><input id="thGoalValues" type="checkbox" /> مبلغ‌ها نشان داده شوند</label>
+            <label class="switch" style="margin-top:12px"><input id="thGoalValues" type="checkbox" /><span class="track" aria-hidden="true"></span><span>مبلغ‌ها نشان داده شوند</span></label>
+            <div class="row" style="margin-top:14px"><button id="resetGoalBtn" class="ghost small">بازنشانی Goal</button></div>
           </div>
         </section>
         <section class="card acc">
           <button class="acc-head" data-acc="acc-presets"><span id="accPresetsLabel">تم‌های آماده</span><span class="acc-arrow">▾</span></button>
           <div class="acc-body" id="acc-presets" hidden>
-            <p id="presetNote" class="muted">با زدن هر تم، رنگ‌ها و CSS سفارشی همین پروفایل جایگزین می‌شود؛ پیش‌نمایش سمت راست همان لحظه عوض می‌شود.</p>
+            <p id="presetNote" class="hint">با زدن هر تم، رنگ‌ها و CSS سفارشی همین پروفایل جایگزین می‌شود؛ پیش‌نمایش سمت راست همان لحظه عوض می‌شود.</p>
             <div id="presetGrid" class="preset-grid"></div>
           </div>
         </section>
@@ -156,12 +193,13 @@
               <button id="cssSampleBtn" class="secondary">CSS نمونه</button>
               <button id="cssFormatBtn" class="secondary">مرتب‌سازی</button>
               <button id="cssDocsBtn" class="secondary">راهنمای کلاس‌ها</button>
+              <button id="resetCssBtn" class="ghost">بازنشانی CSS</button>
             </div>
-            <p id="cssHint" class="muted">Ctrl+Space پیشنهاد هوشمند می‌دهد؛ Tab دو فاصله می‌گذارد؛ براکت‌ها خودکار بسته می‌شوند.</p>
+            <p id="cssHint" class="hint">Ctrl+Space پیشنهاد هوشمند می‌دهد؛ Tab دو فاصله می‌گذارد؛ براکت‌ها خودکار بسته می‌شوند.</p>
             <div id="cssDocs" class="muted" hidden>
               <p>کلاس‌های اورلی چت: <code>.msg</code> (یک پیام)، <code>.msg .user</code> (نام)، <code>.msg .badge</code> (بج؛ نوع‌ها: broadcaster moderator vip subscriber founder og verified staff sub_gifter)، <code>.msg .badge-img</code> (بج تصویری)، <code>.msg .emote</code> (ایموت)، <code>#pinned</code> (باکس پین)، <code>#chatStatus</code> (خط وضعیت).</p>
-              <p>کلاس‌های Goal: <code>#goal .title</code>، <code>#goal .values</code>، <code>#goal .bar</code>، <code>#goal .fill</code>، <code>#goalError</code>.</p>
-              <p>متغیرها: <code>--chat-font-size</code>، <code>--chat-bg-opacity</code>، <code>--chat-text</code>، <code>--chat-radius</code>، <code>--chat-gap</code>، <code>--goal-title-size</code>، <code>--goal-bar-h</code>، <code>--goal-c1</code>، <code>--goal-c2</code>. مثال: <code>.msg { border: 2px solid #f00; }</code></p>
+              <p>کلاس‌های Goal: <code>#goal .title</code>، <code>#goal .stats</code> (بلوک‌های آمار: current/target/pct)، <code>#goal .bar</code>، <code>#goal .fill</code>، <code>#goalError</code>.</p>
+              <p>متغیرها: <code>--chat-font-size</code>، <code>--chat-bg-opacity</code>، <code>--chat-text</code>، <code>--chat-radius</code>، <code>--chat-gap</code>، <code>--chat-line-height</code>، <code>--chat-msg-padding</code>، <code>--goal-title-size</code>، <code>--goal-bar-h</code>، <code>--goal-c1</code>، <code>--goal-c2</code>. مثال: <code>.msg { border: 2px solid #f00; }</code></p>
             </div>
           </div>
         </section>
@@ -171,7 +209,7 @@
       <section class="page" id="page-guide" hidden>
         <section class="card">
           <h2 id="meldGuideTitle">راهنمای Meld Studio</h2>
-          <p id="meldGuideIntro" class="muted">پس‌زمینه‌ی اورلی‌ها کاملاً شفاف است؛ نیازی به Chroma Key نیست. مصرف هم سبک است: چت فقط با رویداد زنده می‌آید و سقف پیام دارد، و Goal هر ۱۰ ثانیه یک‌بار خوانده می‌شود.</p>
+          <p id="meldGuideIntro" class="hint">پس‌زمینه‌ی اورلی‌ها کاملاً شفاف است؛ نیازی به Chroma Key نیست. مصرف هم سبک است: چت فقط با رویداد زنده می‌آید و سقف پیام دارد، و Goal هر ۱۰ ثانیه یک‌بار خوانده می‌شود.</p>
           <ol id="meldGuide">
             <li data-step="1">ReChat را اجرا کن؛ در بخش چت نام کانال را بزن و «اتصال» را بزن تا وضعیت «متصل ✓» شود.</li>
             <li data-step="2">لینک Goal را در بخش Goal بزن و «ذخیره» را بزن تا وضعیت Goal هم «متصل ✓» شود.</li>
@@ -182,7 +220,7 @@
             <li data-step="7">برای هر صحنه، پروفایل همان صحنه را در ReChat انتخاب کن و لینک همان پروفایل را در Meld بگذار.</li>
             <li data-step="8">ReChat باید در تمام مدت استریم باز بماند؛ لینک‌ها فقط روی همین سیستم (localhost) کار می‌کنند و بدون ReChat چیزی نشان نمی‌دهند.</li>
           </ol>
-          <p id="meldTrouble" class="muted">اگر صفحه سیاه دیدی: اول مطمئن شو لایه‌ی دیگری روی آن نیست، بعد reload را بزن. اورلی‌های ReChat صدا ندارند، پس نیازی به «Add an audio track» نیست.</p>
+          <p id="meldTrouble" class="hint">اگر صفحه سیاه دیدی: اول مطمئن شو لایه‌ی دیگری روی آن نیست، بعد reload را بزن. اورلی‌های ReChat صدا ندارند، پس نیازی به «Add an audio track» نیست.</p>
         </section>
       </section>
 
@@ -195,28 +233,36 @@
             <button id="langFaBtn" class="secondary">فارسی</button>
             <button id="langEnBtn" class="secondary">English</button>
           </div>
-          <label style="margin-top:16px"><input id="autoUpdateChk" type="checkbox" /> <span id="autoUpdateLabel">بررسی خودکار به‌روزرسانی هنگام اجرای برنامه</span></label>
+          <label class="switch" style="margin-top:16px"><input id="autoUpdateChk" type="checkbox" /><span class="track" aria-hidden="true"></span><span id="autoUpdateLabel">بررسی خودکار به‌روزرسانی هنگام اجرای برنامه</span></label>
           <div class="row" style="margin-top:10px">
-            <button id="updateBtn">بررسی به‌روزرسانی</button>
+            <button id="updateBtn" class="primary">بررسی به‌روزرسانی</button>
             <span id="updateStatus" class="muted"></span>
           </div>
-          <p id="trayNote" class="muted">بستن پنجره (×) برنامه را به سینی سیستم (tray) می‌برد و سرور اورلی در پس‌زمینه همچنان کار می‌کند؛ با کلیک روی آیکن tray برمی‌گردد.</p>
+          <p id="trayNote" class="hint">بستن پنجره (×) برنامه را به سینی سیستم (tray) می‌برد و سرور اورلی در پس‌زمینه همچنان کار می‌کند؛ با کلیک روی آیکن tray برمی‌گردد.</p>
           <div class="row" style="margin-top:10px">
             <button id="quitBtn" class="secondary">خروج کامل از برنامه</button>
+            <button id="reopenOnboardBtn" class="secondary">نمایش راهنمای شروع</button>
           </div>
-          <p id="versionNote" class="muted">نسخه‌ی ۰٫۲٫۲</p>
+          <p id="versionNote" class="muted">نسخه‌ی ۰٫۳٫۰</p>
         </section>
         <section class="card about">
           <img src="./assets/logo.png" alt="ReChat logo" />
           <div>
             <h2 id="aboutTitle" style="margin:0 0 6px">درباره‌ی ReChat</h2>
-            <p id="aboutText" class="muted" style="margin:0">نسخه‌ی ۰٫۲٫۲. چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.</p>
+            <p id="aboutText" class="muted" style="margin:0">نسخه‌ی ۰٫۳٫۰. چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.</p>
             <p id="aboutLicense" class="muted" style="margin:6px 0 0">لایسنس: دوگانه‌ی MIT/Apache-2.0 — © 2026 Taha Arefi. متن کامل لایسنس‌ها همراه نصب‌کننده است.</p>
           </div>
         </section>
       </section>
     </main>
     <aside id="previewPane">
+      <div class="pv-toolbar" role="group" aria-label="پس‌زمینه‌ی پیش‌نمایش">
+        <button type="button" data-bg="" class="active small">شفاف</button>
+        <button type="button" data-bg="light" class="small">روشن</button>
+        <button type="button" data-bg="dark" class="small">تیره</button>
+        <button type="button" data-bg="game" class="small">صحنه‌ی بازی</button>
+        <button type="button" id="testMsgBtn" class="small primary">پیام آزمایشی +</button>
+      </div>
       <div class="preview-box">
         <div class="preview-head"><span id="prevChatLabel">پیش‌نمایش چت</span></div>
         <iframe id="previewChat" title="پیش‌نمایش چت"></iframe>
@@ -227,6 +273,40 @@
       </div>
       <p id="previewNote" class="muted">پیش‌نمایش‌ها همیشه همین‌جا می‌مانند و با هر تغییری در شخصی‌سازی همان لحظه تازه می‌شوند.</p>
     </aside>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div class="modal-backdrop" id="onboardBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="wizTitle">
+      <div class="wizard-step" data-step="1">
+        <h2 id="wizTitle">به ReChat خوش آمدی!</h2>
+        <p id="wizStep1Text" class="hint">در سه قدم آماده‌ی استریم شو. اول: نام کانال کیکت را بزن و وصل شو.</p>
+        <label id="wizChannelLabel" for="wizChannel">نام کانال کیک</label>
+        <input id="wizChannel" type="text" class="ltr-input" placeholder="kick.com/tahaa" autocomplete="off" />
+        <div class="row" style="margin-top:14px">
+          <button id="wizConnectBtn" class="primary">اتصال</button>
+          <button id="wizSkipBtn" class="ghost">رد کردن</button>
+        </div>
+      </div>
+      <div class="wizard-step" data-step="2" hidden>
+        <h2 id="wizStep2Title">لینک‌های اورلی را کپی کن</h2>
+        <p id="wizStep2Text" class="hint">این دو لینک را در Meld به‌عنوان Browser Source اضافه می‌کنی.</p>
+        <div class="row" style="margin-top:12px"><button id="wizCopyChatBtn" class="secondary">کپی لینک چت</button><button id="wizCopyGoalBtn" class="secondary">کپی لینک Goal</button></div>
+        <div class="row" style="margin-top:14px">
+          <button id="wizBack2Btn" class="secondary">قبلی</button>
+          <button id="wizNext2Btn" class="primary">بعدی</button>
+          <button id="wizSkip2Btn" class="ghost">رد کردن</button>
+        </div>
+      </div>
+      <div class="wizard-step" data-step="3" hidden>
+        <h2 id="wizStep3Title">در Meld اضافه کن</h2>
+        <p id="wizStep3Text" class="hint">در Meld: پنل Layers ← + ← Browser، بعد لینک را در قسمت URL بچسبان. پس‌زمینه شفاف است و نیازی به Chroma Key نیست.</p>
+        <div class="row" style="margin-top:14px">
+          <button id="wizBack3Btn" class="secondary">قبلی</button>
+          <button id="wizFinishBtn" class="primary">تمام شد!</button>
+        </div>
+      </div>
+      <div class="wizard-dots"><span data-dot="1" class="on"></span><span data-dot="2"></span><span data-dot="3"></span></div>
+    </div>
   </div>
   <script type="module" src="./main.ts"></script>
 </body>

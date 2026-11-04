@@ -37,6 +37,12 @@ fn d50() -> usize {
 fn d_opacity() -> f32 {
     0.55
 }
+fn d_line_height() -> f32 {
+    1.7
+}
+fn d_msg_pad() -> u32 {
+    10
+}
 fn d_true() -> bool {
     true
 }
@@ -63,6 +69,10 @@ pub struct Theme {
     pub chat_radius: u32,
     #[serde(default = "d8")]
     pub chat_gap: u32,
+    #[serde(default = "d_line_height")]
+    pub chat_line_height: f32,
+    #[serde(default = "d_msg_pad")]
+    pub chat_msg_padding: u32,
     #[serde(default = "d_true")]
     pub show_badges: bool,
     #[serde(default = "d_true")]
@@ -91,6 +101,8 @@ impl Default for Theme {
             chat_text_color: d_text(),
             chat_radius: d10(),
             chat_gap: d8(),
+            chat_line_height: d_line_height(),
+            chat_msg_padding: d_msg_pad(),
             show_badges: true,
             show_username_color: true,
             max_messages: d50(),
@@ -149,12 +161,14 @@ impl Themes {
     pub fn css(&self, name: Option<&str>) -> String {
         let (_, t) = self.resolve(name);
         let mut css = format!(
-            ":root{{--chat-font-size:{}px;--chat-bg-opacity:{};--chat-text:{};--chat-radius:{}px;--chat-gap:{}px;--goal-title-size:{}px;--goal-bar-h:{}px;--goal-c1:{};--goal-c2:{};}}",
+            ":root{{--chat-font-size:{}px;--chat-bg-opacity:{};--chat-text:{};--chat-radius:{}px;--chat-gap:{}px;--chat-line-height:{};--chat-msg-padding:{}px;--goal-title-size:{}px;--goal-bar-h:{}px;--goal-c1:{};--goal-c2:{};}}",
             t.chat_font_size,
             t.chat_bg_opacity.clamp(0.0, 1.0),
             t.chat_text_color,
             t.chat_radius,
             t.chat_gap,
+            t.chat_line_height.clamp(1.2, 2.2),
+            t.chat_msg_padding,
             t.goal_title_size,
             t.goal_bar_height,
             t.goal_bar_c1,
