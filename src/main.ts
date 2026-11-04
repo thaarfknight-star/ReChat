@@ -127,7 +127,7 @@ const dict: Record<Lang, Record<string, string>> = {
     presetNote: "با زدن هر تم، رنگ‌ها و CSS سفارشی همین پروفایل جایگزین می‌شود؛ پیش‌نمایش سمت راست همان لحظه عوض می‌شود.",
     cssSample: "CSS نمونه",
     cssFormat: "مرتب‌سازی",
-    cssHint: "Ctrl+Space پیشنهاد هوشمند می‌دهد؛ Tab دو فاصله می‌گذارد؛ براکت‌ها خودکار بسته می‌شوند.",
+    cssHint: "پیشنهاد هوشمند فقط با Ctrl+Space باز می‌شود؛ Tab دو فاصله می‌گذارد؛ براکت‌ها خودکار بسته می‌شوند.",
     cssDocs: "راهنمای کلاس‌ها",
     prevChatLabel: "پیش‌نمایش چت",
     prevGoalLabel: "پیش‌نمایش Goal",
@@ -249,8 +249,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۵",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۵ (حالت چت مستراستریم: وقتی کیک از ایران مستقیم باز نمی‌شود، با لینک ویجت مستراستریم وصل شو؛ پیام‌ها با همان قالب و فیلترهای ReChat می‌آیند). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۶",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۶ (ادیتور CSS ساده و قابل تایپ شد + حالت چت مستراستریم). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -302,7 +302,7 @@ const dict: Record<Lang, Record<string, string>> = {
     presetNote: "Applying a theme replaces this profile's colors and custom CSS; the preview on the right updates instantly.",
     cssSample: "Sample CSS",
     cssFormat: "Format",
-    cssHint: "Ctrl+Space shows smart suggestions; Tab inserts two spaces; brackets auto-close.",
+    cssHint: "Smart suggestions only on Ctrl+Space; Tab inserts two spaces; brackets auto-close.",
     cssDocs: "Class guide",
     prevChatLabel: "Chat preview",
     prevGoalLabel: "Goal preview",
@@ -424,8 +424,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.5",
-    aboutTextNew: "Version 0.3.5 (MasterStream chat mode: when Kick is not reachable directly from Iran, connect with your MasterStream widget link; messages arrive with ReChat's own theme and filters). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.6",
+    aboutTextNew: "Version 0.3.6 (plain, typable CSS editor + MasterStream chat mode). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -1309,8 +1309,6 @@ const profileSel = $<HTMLSelectElement>("profileSel");
 const newProfileName = $<HTMLInputElement>("newProfileName");
 const ioTa = $<HTMLTextAreaElement>("ioTa");
 const cssTa = $<HTMLTextAreaElement>("cssTa");
-const cssHiCode = document.querySelector("#cssHi code") as HTMLElement;
-const cssHiPre = document.getElementById("cssHi") as HTMLPreElement;
 const previewChatFrame = $<HTMLIFrameElement>("previewChat");
 const previewGoalFrame = $<HTMLIFrameElement>("previewGoal");
 
@@ -1361,8 +1359,6 @@ function loadThemeIntoControls(t: Theme): void {
   $<HTMLInputElement>("thGoalH").value = String(t.goal_bar_height);
   $<HTMLInputElement>("thGoalValues").checked = t.show_goal_values;
   cssTa.value = t.custom_css;
-  syncCssHighlight();
-  syncCssGutter();
 }
 
 function renderProfileSelect(): void {
@@ -1433,54 +1429,44 @@ function updatePreview(): void {
   previewGoalFrame.srcdoc = previewDoc("goal");
 }
 
-function escLite(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function highlightCss(src: string): string {
-  return escLite(src).replace(
-    /(\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(@[a-zA-Z-]+)|([a-zA-Z-]+(?=\s*:))|(\b\d+(?:\.\d+)?(?:px|em|rem|%|s|ms)?\b)|(!important)/g,
-    (_m, com, str, at, prop, num, imp) => {
-      if (com) return `<span class="tok-com">${com}</span>`;
-      if (str) return `<span class="tok-str">${str}</span>`;
-      if (at) return `<span class="tok-at">${at}</span>`;
-      if (prop) return `<span class="tok-prop">${prop}</span>`;
-      if (num) return `<span class="tok-num">${num}</span>`;
-      if (imp) return `<span class="tok-imp">${imp}</span>`;
-      return _m;
-    },
-  );
-}
-
-function syncCssHighlight(): void {
-  cssHiCode.innerHTML = highlightCss(cssTa.value) + "\n";
-}
-
-const cssGutterInner = document.getElementById("cssGutterInner") as HTMLElement;
 const cssAcPopup = document.getElementById("cssAcPopup") as HTMLDivElement;
 
-function syncCssGutter(): void {
-  const n = cssTa.value.split("\n").length;
-  cssGutterInner.textContent = Array.from({ length: n }, (_, i) => String(i + 1)).join("\n");
-  cssGutterInner.style.transform = `translateY(${-cssTa.scrollTop}px)`;
+// 0.3.6: the old overlay editor reloaded both preview iframes on every
+// keystroke, which can steal focus from the textarea in WebView2, and
+// its autocomplete popped up on every typed word. Preview now updates
+// debounced, autocomplete only on Ctrl+Space, and if an iframe reload
+// did steal focus, it is handed back to the editor with the caret kept.
+let cssPreviewTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleCssPreview(): void {
+  clearTimeout(cssPreviewTimer);
+  cssPreviewTimer = setTimeout(() => {
+    const wasFocused = document.activeElement === cssTa;
+    const s = cssTa.selectionStart;
+    const en = cssTa.selectionEnd;
+    updatePreview();
+    const restore = (): void => {
+      if (wasFocused && document.activeElement !== cssTa) {
+        cssTa.focus();
+        try {
+          cssTa.selectionStart = s;
+          cssTa.selectionEnd = en;
+        } catch {
+          /* keep focus even if the caret range is stale */
+        }
+      }
+    };
+    restore();
+    setTimeout(restore, 150);
+  }, 300);
 }
 
 function afterCssEdit(): void {
-  syncCssHighlight();
-  syncCssGutter();
-  updatePreview();
+  scheduleCssPreview();
   scheduleThemeSave();
 }
 
-cssTa.addEventListener("input", (e) => {
+cssTa.addEventListener("input", () => {
   afterCssEdit();
-  const data = (e as InputEvent).data;
-  if (data && /[a-zA-Z0-9_#\-.%]/.test(data)) showAutocomplete(false);
-});
-cssTa.addEventListener("scroll", () => {
-  cssHiPre.scrollTop = cssTa.scrollTop;
-  cssHiPre.scrollLeft = cssTa.scrollLeft;
-  cssGutterInner.style.transform = `translateY(${-cssTa.scrollTop}px)`;
 });
 
 // ---------- VSCode-style autocomplete (M8.1) ----------
@@ -1653,11 +1639,11 @@ cssTa.addEventListener("keydown", (e) => {
     showAutocomplete(true);
     return;
   }
-  const pairs: Record<string, string> = { "{": "}", "(": ")", "[": "]", '"': '"', "'": "'" };
+  // 0.3.6: auto-close only brackets, never quotes — quote auto-close
+  // kept inserting a second quote while typing strings and felt broken.
+  const pairs: Record<string, string> = { "{": "}", "(": ")", "[": "]" };
   if (!e.ctrlKey && !e.metaKey && pairs[e.key]) {
     const s = cssTa.selectionStart;
-    const next = cssTa.value[s];
-    if ((e.key === '"' || e.key === "'") && next && /[\w]/.test(next)) return;
     e.preventDefault();
     const val = cssTa.value;
     cssTa.value = val.slice(0, s) + e.key + pairs[e.key] + val.slice(cssTa.selectionEnd);
