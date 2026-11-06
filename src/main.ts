@@ -249,8 +249,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۶",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۶ (ادیتور CSS ساده و قابل تایپ شد + حالت چت مستراستریم). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۷",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۷ (لینک Goal ذخیره‌شده موقع باز شدن برنامه دوباره وصل می‌شود + متن دقیق خطای Goal زیر کارت نشان داده می‌شود). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -424,8 +424,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.6",
-    aboutTextNew: "Version 0.3.6 (plain, typable CSS editor + MasterStream chat mode). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.7",
+    aboutTextNew: "Version 0.3.7 (saved Goal link reconnects on startup + the exact Goal error detail shows under the card). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -993,6 +993,7 @@ function renderGoalStatus(state: string, detail?: string): void {
   setPill(goalStatus, dot, s);
   setPill($("hdrGoalStatus"), dot, s);
   const errEl = $("goalErrorText");
+  const detailEl = $("goalErrorDetail");
   if (state === "error") {
     // 0.3.2: the old mapping sent every backend failure to the generic
     // "save again" text, hiding whether the link, the network, or Donofa
@@ -1000,8 +1001,12 @@ function renderGoalStatus(state: string, detail?: string): void {
     // keywords for DNS/connect/reset/TLS failures, so they all landed in
     // the generic bucket and told the user to re-save a good link.
     errEl.textContent = humanGoalError(detail);
+    // 0.3.7: also show the raw backend detail (salt masked), so the
+    // real cause is visible instead of only the generic message.
+    detailEl.textContent = (detail ?? "").replace(/salt=[^&\s]+/gi, "salt=…");
   } else {
     errEl.textContent = "";
+    detailEl.textContent = "";
   }
 }
 
@@ -1194,6 +1199,13 @@ if (isTauri) {
   void listen<{ state: string; detail?: string }>("goal-status", (e) => {
     renderGoalStatus(e.payload.state, e.payload.detail);
   }).catch(() => undefined);
+  // 0.3.7: the saved goal link was never reconnected on startup, so
+  // after every restart the goal looked "not saved" until Save was
+  // clicked again. Reconnect it now, like the remembered chat channel.
+  const savedGoal = (localStorage.getItem("rechat-goal") ?? "").trim();
+  if (savedGoal) {
+    void invoke("connect_goal", { link: savedGoal }).catch(() => undefined);
+  }
   // Auto-connect: Kick OAuth first, else the remembered manual channel.
   void refreshKickUi().then((s) => {
     if (s?.connected) {

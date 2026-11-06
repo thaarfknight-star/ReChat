@@ -198,7 +198,7 @@ async fn handle(
             let goal = goal_hub.snapshot().await;
             let body = serde_json::json!({
                 "status": "ok",
-                "version": "0.3.6",
+                "version": "0.3.7",
                 "chat": chat,
                 "goal": goal,
             });
