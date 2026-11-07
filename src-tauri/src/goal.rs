@@ -38,7 +38,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 use crate::masterstream;
 
-const USER_AGENT: &str = "ReChat/0.3.12";
+const USER_AGENT: &str = "ReChat/0.3.13";
 /// Fallback poll cadence while the realtime socket is down (was 10s
 /// when polling was the only path).
 const FALLBACK_POLL_SECS: u64 = 60;
@@ -368,9 +368,13 @@ async fn run_goal_ws_session(
         Ok(r) => r,
         Err(_) => return WsOutcome::Down,
     };
-    let (mut ws, _) = match connect_async(req).await {
-        Ok(p) => p,
-        Err(_) => return WsOutcome::Down,
+    // 0.3.13: connect_async has NO timeout of its own — on a network
+    // that blackholes the socket, it used to hang for minutes and
+    // stall the whole loop (no fallback poll, no retry). Cap it.
+    let connected = tokio::time::timeout(Duration::from_secs(10), connect_async(req)).await;
+    let (mut ws, _) = match connected {
+        Ok(Ok(p)) => p,
+        _ => return WsOutcome::Down,
     };
     let channel = format!("widget.{id}");
     let mut subscribed = false;
@@ -471,7 +475,11 @@ async fn run_goal_loop(hub: Arc<GoalHub>, link: String, gen: u64) {
     };
     // One initial fetch for the current values; after that the
     // socket carries every update and Donofa gets no polling at all.
-    match fetch_with_retry(&id, &salt).await {
+    // 0.3.13: a single attempt here — the old three-attempt retry
+    // (up to ~49s on a timing-out network) delayed the socket, which
+    // is the path that actually heals a timeout. Retries stay on the
+    // fallback poll ticks below.
+    match fetch_goal(&id, &salt).await {
         Ok(goal) => set_live(&hub, &link, goal).await,
         Err(e) => set_error(&hub, &link, e).await,
     }

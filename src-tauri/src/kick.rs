@@ -42,7 +42,7 @@ use tauri::Emitter;
 use tokio::sync::{broadcast, RwLock};
 use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
-const USER_AGENT: &str = "ReChat/0.3.12";
+const USER_AGENT: &str = "ReChat/0.3.13";
 const FALLBACK_PUSHER_KEY: &str = "34bf7a0ff419a2a775b9";
 const FALLBACK_CLUSTER: &str = "us2";
 
