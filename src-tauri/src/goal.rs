@@ -38,7 +38,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 use crate::masterstream;
 
-const USER_AGENT: &str = "ReChat/0.3.13";
+const USER_AGENT: &str = "ReChat/0.3.14";
 /// Fallback poll cadence while the realtime socket is down (was 10s
 /// when polling was the only path).
 const FALLBACK_POLL_SECS: u64 = 60;

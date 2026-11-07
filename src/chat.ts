@@ -71,6 +71,17 @@ const chatDirParam = new URLSearchParams(location.search).get("dir");
 const forcedDir = chatDirParam === "rtl" ? "rtl" : chatDirParam === "ltr" ? "ltr" : null;
 document.documentElement.dir = forcedDir ?? (overlayLang === "fa" ? "rtl" : "ltr");
 
+// 0.3.14: per-link column width override (?maxw=<px>, 0 = full width).
+// An inline style on <html> beats the :root rule from the profile.
+const maxwParam = new URLSearchParams(location.search).get("maxw");
+if (maxwParam !== null) {
+  const n = Number(maxwParam);
+  document.documentElement.style.setProperty(
+    "--chat-max-width",
+    Number.isFinite(n) && n > 0 ? `${Math.round(n)}px` : "none",
+  );
+}
+
 const badgeLabel: Record<string, string> = overlayLang === "fa"
   ? {
       broadcaster: "پخش‌کننده",

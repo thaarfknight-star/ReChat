@@ -43,6 +43,9 @@ fn d_line_height() -> f32 {
 fn d_msg_pad() -> u32 {
     10
 }
+fn d560() -> u32 {
+    560
+}
 fn d_true() -> bool {
     true
 }
@@ -73,6 +76,11 @@ pub struct Theme {
     pub chat_line_height: f32,
     #[serde(default = "d_msg_pad")]
     pub chat_msg_padding: u32,
+    /// Max width of the chat column in px; 0 = full layer width.
+    /// Without a cap, messages stretch across the whole Meld browser
+    /// layer and read badly (0.3.14: MasterStream chat too wide).
+    #[serde(default = "d560")]
+    pub chat_max_width: u32,
     #[serde(default = "d_true")]
     pub show_badges: bool,
     #[serde(default = "d_true")]
@@ -103,6 +111,7 @@ impl Default for Theme {
             chat_gap: d8(),
             chat_line_height: d_line_height(),
             chat_msg_padding: d_msg_pad(),
+            chat_max_width: d560(),
             show_badges: true,
             show_username_color: true,
             max_messages: d50(),
@@ -160,8 +169,13 @@ impl Themes {
     /// CSS injected into the overlay page for a profile.
     pub fn css(&self, name: Option<&str>) -> String {
         let (_, t) = self.resolve(name);
+        let maxw = if t.chat_max_width > 0 {
+            format!("{}px", t.chat_max_width)
+        } else {
+            "none".to_string()
+        };
         let mut css = format!(
-            ":root{{--chat-font-size:{}px;--chat-bg-opacity:{};--chat-text:{};--chat-radius:{}px;--chat-gap:{}px;--chat-line-height:{};--chat-msg-padding:{}px;--goal-title-size:{}px;--goal-bar-h:{}px;--goal-c1:{};--goal-c2:{};}}",
+            ":root{{--chat-font-size:{}px;--chat-bg-opacity:{};--chat-text:{};--chat-radius:{}px;--chat-gap:{}px;--chat-line-height:{};--chat-msg-padding:{}px;--chat-max-width:{};--goal-title-size:{}px;--goal-bar-h:{}px;--goal-c1:{};--goal-c2:{};}}",
             t.chat_font_size,
             t.chat_bg_opacity.clamp(0.0, 1.0),
             t.chat_text_color,
@@ -169,6 +183,7 @@ impl Themes {
             t.chat_gap,
             t.chat_line_height.clamp(1.2, 2.2),
             t.chat_msg_padding,
+            maxw,
             t.goal_title_size,
             t.goal_bar_height,
             t.goal_bar_c1,

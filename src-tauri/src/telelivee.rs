@@ -58,7 +58,7 @@ use serde_json::Value;
 
 use crate::kick::{ChatEvent, ChatHub, ChatMessage, ChatStatus};
 
-const USER_AGENT: &str = "ReChat/0.3.13";
+const USER_AGENT: &str = "ReChat/0.3.14";
 const LABEL: &str = "TeleLivee";
 const POLL_BASE: &str = "https://chat.telelivee.ir/socket.io/";
 

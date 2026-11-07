@@ -254,8 +254,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۳",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۳ (اتصال وب‌سوکت Goal سقف ۱۰ ثانیه‌ای گرفت تا روی شبکه‌ی کند گیر نکند + اولین خواندن Goal دیگر با سه تلاش پشت سر هم وب‌سوکت را عقب نمی‌اندازد). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۴",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۴ (ستون چت سقف عرض گرفت: پیام‌ها دیگر به اندازهٔ کل لایه کش نمی‌آیند + تنظیم «عرض ستون چت» در شخصی‌سازی). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -434,8 +434,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.13",
-    aboutTextNew: "Version 0.3.13 (Goal websocket connect capped at 10 seconds so a stalled network can't block retries + the first Goal read no longer delays the socket with three attempts). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.14",
+    aboutTextNew: "Version 0.3.14 (Chat column width cap: messages no longer stretch across the whole layer + a 'Chat column width' setting in customization). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -727,6 +727,7 @@ function applyLang(): void {
     setLabel("thMaxMsg", "Max messages on screen");
     setLabel("thLineHeight", "Line height");
     setLabel("thMsgPad", "Message padding (px)");
+    setLabel("thChatMaxW", "Chat column width (px; 0 = full width)");
     setLabel("thChatDir", "Chat direction");
     setLabel("thGoalTitle", "Title size (px)");
     setLabel("thGoalH", "Bar height (px)");
@@ -752,6 +753,7 @@ function applyLang(): void {
     setLabel("thMaxMsg", "بیشترین پیام روی صفحه");
     setLabel("thLineHeight", "فاصله‌ی خطوط");
     setLabel("thMsgPad", "فاصله‌ی داخل پیام (px)");
+    setLabel("thChatMaxW", "عرض ستون چت (px؛ ۰ = تمام عرض)");
     setLabel("thChatDir", "جهت چت");
     setLabel("thGoalTitle", "اندازه‌ی تیتر (px)");
     setLabel("thGoalH", "ارتفاع نوار (px)");
@@ -1307,6 +1309,7 @@ type Theme = {
   chat_gap: number;
   chat_line_height: number;
   chat_msg_padding: number;
+  chat_max_width: number;
   show_badges: boolean;
   show_username_color: boolean;
   max_messages: number;
@@ -1328,6 +1331,7 @@ function defaultTheme(): Theme {
     chat_gap: 8,
     chat_line_height: 1.7,
     chat_msg_padding: 10,
+    chat_max_width: 560,
     show_badges: true,
     show_username_color: true,
     max_messages: 50,
@@ -1342,7 +1346,8 @@ function defaultTheme(): Theme {
 
 // Mirrors theme.rs Theme::css (keep the two in sync).
 function buildThemeCss(t: Theme): string {
-  let css = `:root{--chat-font-size:${t.chat_font_size}px;--chat-bg-opacity:${t.chat_bg_opacity};--chat-text:${t.chat_text_color};--chat-radius:${t.chat_radius}px;--chat-gap:${t.chat_gap}px;--chat-line-height:${t.chat_line_height};--chat-msg-padding:${t.chat_msg_padding}px;--goal-title-size:${t.goal_title_size}px;--goal-bar-h:${t.goal_bar_height}px;--goal-c1:${t.goal_bar_c1};--goal-c2:${t.goal_bar_c2};}`;
+  const maxw = t.chat_max_width > 0 ? `${t.chat_max_width}px` : "none";
+  let css = `:root{--chat-font-size:${t.chat_font_size}px;--chat-bg-opacity:${t.chat_bg_opacity};--chat-text:${t.chat_text_color};--chat-radius:${t.chat_radius}px;--chat-gap:${t.chat_gap}px;--chat-line-height:${t.chat_line_height};--chat-msg-padding:${t.chat_msg_padding}px;--chat-max-width:${maxw};--goal-title-size:${t.goal_title_size}px;--goal-bar-h:${t.goal_bar_height}px;--goal-c1:${t.goal_bar_c1};--goal-c2:${t.goal_bar_c2};}`;
   if (!t.show_badges) css += ".msg .badge,.msg .badge-img{display:none!important}";
   if (!t.show_username_color) css += ".msg .user{color:var(--chat-text)!important}";
   if (!t.show_goal_values) css += "#goal .values{display:none!important}";
@@ -1421,6 +1426,7 @@ function themeFromControls(): Theme {
     chat_gap: num($<HTMLInputElement>("thChatGap"), 8),
     chat_line_height: num($<HTMLInputElement>("thLineHeight"), 1.7),
     chat_msg_padding: num($<HTMLInputElement>("thMsgPad"), 10),
+    chat_max_width: num($<HTMLInputElement>("thChatMaxW"), 560),
     show_badges: $<HTMLInputElement>("thBadges").checked,
     show_username_color: $<HTMLInputElement>("thUserColor").checked,
     max_messages: num($<HTMLInputElement>("thMaxMsg"), 50),
@@ -1441,6 +1447,7 @@ function loadThemeIntoControls(t: Theme): void {
   $<HTMLInputElement>("thChatGap").value = String(t.chat_gap);
   $<HTMLInputElement>("thLineHeight").value = String(t.chat_line_height ?? 1.7);
   $<HTMLInputElement>("thMsgPad").value = String(t.chat_msg_padding ?? 10);
+  $<HTMLInputElement>("thChatMaxW").value = String(t.chat_max_width ?? 560);
   $<HTMLInputElement>("thBadges").checked = t.show_badges;
   $<HTMLInputElement>("thUserColor").checked = t.show_username_color;
   $<HTMLInputElement>("thMaxMsg").value = String(t.max_messages);
@@ -1849,7 +1856,7 @@ function scheduleThemeSave(): void {
 
 for (const id of [
   "thChatSize", "thChatOpacity", "thChatText", "thChatRadius", "thChatGap",
-  "thLineHeight", "thMsgPad",
+  "thLineHeight", "thMsgPad", "thChatMaxW",
   "thBadges", "thUserColor", "thMaxMsg", "thGoalTitle", "thGoalC1",
   "thGoalC2", "thGoalH", "thGoalValues",
 ]) {

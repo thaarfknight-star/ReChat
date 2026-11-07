@@ -53,7 +53,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 use crate::kick::{Badge, ChatEvent, ChatHub, ChatMessage, ChatStatus};
 
-const USER_AGENT: &str = "ReChat/0.3.13";
+const USER_AGENT: &str = "ReChat/0.3.14";
 const LABEL: &str = "MasterStream";
 
 /// Login values parsed out of a widget page.

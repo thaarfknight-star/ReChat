@@ -13,6 +13,11 @@ body { font-family: "Vazirmatn", Tahoma, "Segoe UI", sans-serif; color: var(--ch
 #pinned:empty { display: none; }
 #pinned .msg { border: 1px solid rgba(250, 204, 21, .6); }
 #messages { display: flex; flex-direction: column; gap: var(--chat-gap, 8px); padding: 12px; }
+/* 0.3.14: the chat column caps at --chat-max-width (profile setting,
+   560px default, none = full width) so messages never stretch across
+   a wide Meld layer. A block box sticks to the inline-start edge by
+   default (right in RTL, left in LTR). ?maxw= overrides per link. */
+#messages, #pinned, #chatStatus { max-width: var(--chat-max-width, none); }
 /* unicode-bidi: plaintext lets each message follow its own first strong
    character, and Latin runs inside are wrapped in <bdi> by chat.ts, so
    mixed Persian/English punctuation stays where it belongs. */
