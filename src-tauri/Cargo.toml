@@ -1,6 +1,6 @@
 [package]
 name = "rechat"
-version = "0.3.7"
+version = "0.3.8"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
@@ -16,6 +16,9 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio-tungstenite = "0.26"
 futures-util = "0.3"
+# MasterStream WS handshake (0.3.8): build the request to send the
+# browser widget's Origin header.
+http = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 # Kick OAuth (M8): PKCE + browser open
 rand = "0.8"

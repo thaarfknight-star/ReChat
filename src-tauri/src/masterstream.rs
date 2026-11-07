@@ -53,7 +53,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 use crate::kick::{Badge, ChatEvent, ChatHub, ChatMessage, ChatStatus};
 
-const USER_AGENT: &str = "ReChat/0.3.7";
+const USER_AGENT: &str = "ReChat/0.3.8";
 const LABEL: &str = "MasterStream";
 
 /// Login values parsed out of a widget page.
@@ -158,6 +158,14 @@ async fn fetch_widget_config(link: &str) -> Result<WidgetConfig, String> {
     let html = resp.text().await.map_err(|_| {
         "صفحه‌ی ویجت مستراستریم خوانده نشد".to_string()
     })?;
+    // 0.3.8: MasterStream now answers a dead widget link with its own
+    // "آدرس وارد شده صحیح نیست" page (verified live 2026-11-07: the
+    // 2026-11-04 link returns this 1.4 KB error page, with and without
+    // its query string). Say so plainly instead of the generic
+    // "values not found" text: no retry can heal a dead link.
+    if html.contains("آدرس وارد شده صحیح نیست") {
+        return Err("این لینک ویجت مستراستریم دیگر معتبر نیست؛ از داشبورد مستراستریم یک لینک تازه‌ی ویجت چت بگیر و جایگزین کن".to_string());
+    }
     let user_id = extract_user_id(&html)
         .ok_or("مقادیر لاگین ویجت در صفحه پیدا نشد؛ لینک کامل ویجت را کپی کن")?;
     let chat_key = extract_string(&html, "window.socket_chat_key")
@@ -177,6 +185,18 @@ async fn fetch_widget_config(link: &str) -> Result<WidgetConfig, String> {
         service_url,
         service_path,
     })
+}
+
+/// WebSocket handshake request matching the browser widget: the same
+/// Origin the widget page's own socket.io client sends. A bare
+/// tungstenite handshake sends no Origin at all.
+fn ws_request(url: &str) -> Result<http::Request<()>, String> {
+    http::Request::builder()
+        .uri(url)
+        .header("Origin", "https://masterstream.ir")
+        .header("User-Agent", USER_AGENT)
+        .body(())
+        .map_err(|e| e.to_string())
 }
 
 /// Build the websocket URL the Socket.IO JS client would use:
@@ -341,6 +361,17 @@ async fn run_masterstream_loop(hub: Arc<ChatHub>, link: String, gen: u64) {
         let cfg = match fetch_widget_config(&link).await {
             Ok(c) => c,
             Err(e) => {
+                // A dead widget link never heals by retrying: show the
+                // error once and stop instead of looping forever.
+                if e.contains("دیگر معتبر نیست") {
+                    hub.set_status(ChatStatus {
+                        state: "error".to_string(),
+                        channel: Some(LABEL.to_string()),
+                        detail: Some(e),
+                    })
+                    .await;
+                    return;
+                }
                 hub.set_status(ChatStatus {
                     state: "error".to_string(),
                     channel: Some(LABEL.to_string()),
@@ -360,7 +391,22 @@ async fn run_masterstream_loop(hub: Arc<ChatHub>, link: String, gen: u64) {
         })
         .await;
         let url = socket_url(&cfg);
-        let ws = match connect_async(&url).await {
+        let req = match ws_request(&url) {
+            Ok(r) => r,
+            Err(e) => {
+                hub.set_status(ChatStatus {
+                    state: "reconnecting".to_string(),
+                    channel: Some(LABEL.to_string()),
+                    detail: Some(format!("اتصال به مستراستریم ناموفق: {e}")),
+                })
+                .await;
+                attempt += 1;
+                tokio::time::sleep(backoff).await;
+                backoff = std::cmp::min(backoff * 2, Duration::from_secs(30));
+                continue;
+            }
+        };
+        let ws = match connect_async(req).await {
             Ok((s, _)) => s,
             Err(e) => {
                 hub.set_status(ChatStatus {

@@ -18,8 +18,12 @@
 //!
 //! After the browser callback, the local server exchanges the code,
 //! resolves the channel slug, persists the tokens and connects chat
-//! through the normal Pusher path (kick.rs). Tokens live 2 hours;
-//! auto-connect refreshes them with the refresh_token grant.
+//! through the normal Pusher path (kick.rs). Tokens live 2 hours.
+//! Auto-connect (0.3.8): chat needs only the stored slug — the Pusher
+//! path uses the public channel resolver, no OAuth token — so the
+//! login sticks even when the token refresh cannot reach Kick (Kick
+//! is unreachable from Iran without VPN/DNS). An expired token is
+//! refreshed in the background, best-effort, and never blocks chat.
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -38,7 +42,7 @@ const TOKEN_URL: &str = "https://id.kick.com/oauth/token";
 const USERS_URL: &str = "https://api.kick.com/public/v1/users";
 const CHANNELS_URL: &str = "https://api.kick.com/public/v1/channels";
 const REDIRECT_URI: &str = "http://localhost:17874/oauth/callback";
-const USER_AGENT: &str = "ReChat/0.3.7";
+const USER_AGENT: &str = "ReChat/0.3.8";
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct KickClientConfig {
@@ -352,30 +356,36 @@ impl KickAuthState {
         Ok(())
     }
 
-    /// Startup auto-connect: refresh when expired, then connect chat
-    /// with the stored slug through the normal Pusher path.
+    /// Startup auto-connect: connect chat with the stored slug
+    /// through the normal Pusher path. The slug never expires, and
+    /// the Pusher path needs no OAuth token — so an expired access
+    /// token is refreshed in the background (best-effort) and a
+    /// refresh failure never blocks the login from sticking. Before
+    /// 0.3.8 the refresh ran first and its failure (Kick unreachable
+    /// from Iran without VPN/DNS) made every restart look like the
+    /// login was lost, forcing a fresh browser login each time.
     pub async fn auto_connect(
         self: &std::sync::Arc<Self>,
         hub: std::sync::Arc<ChatHub>,
     ) -> Result<String, String> {
-        let slug = {
+        let (slug, expired) = {
             let toks = self.tokens.read().await;
             let Some(t) = toks.as_ref() else {
                 return Err("اتصال Kick ذخیره نشده است".to_string());
             };
-            if t.expires_at_unix <= now_unix() + 60 {
-                drop(toks);
-                self.refresh().await?;
-            }
-            self.tokens
-                .read()
-                .await
-                .as_ref()
-                .map(|t| t.slug.clone())
-                .unwrap_or_default()
+            (
+                t.slug.clone(),
+                t.expires_at_unix <= now_unix() + 60,
+            )
         };
         if slug.is_empty() {
             return Err("کانال ذخیره‌شده خالی است".to_string());
+        }
+        if expired {
+            let this = std::sync::Arc::clone(self);
+            tokio::spawn(async move {
+                let _ = this.refresh().await;
+            });
         }
         if hub.connect(slug.clone()).await {
             kick::spawn_loop(hub, slug.clone());

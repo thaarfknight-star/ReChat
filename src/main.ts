@@ -249,8 +249,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۷",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۷ (لینک Goal ذخیره‌شده موقع باز شدن برنامه دوباره وصل می‌شود + متن دقیق خطای Goal زیر کارت نشان داده می‌شود). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۸",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۸ (ورود به Kick فقط یک‌بار: چت با نام کانال ذخیره‌شده وصل می‌شود و تازه‌سازی توکن دیگر جلویش را نمی‌گیرد + لینک ویجت مرده‌ی مستراستریم واضح گزارش می‌شود). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -424,8 +424,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.7",
-    aboutTextNew: "Version 0.3.7 (saved Goal link reconnects on startup + the exact Goal error detail shows under the card). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.8",
+    aboutTextNew: "Version 0.3.8 (Kick login once: chat connects with the stored channel name and token refresh no longer blocks it + dead MasterStream widget links are reported plainly). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -1155,6 +1155,10 @@ $("kickConnectBtn").addEventListener("click", () => {
           if (s?.connected || tries >= 60) {
             clearInterval(kickPollTimer);
             if (s?.connected) {
+              // 0.3.8: remember that Kick login is the chosen mode,
+              // so startup auto-connect keeps it (and MasterStream
+              // can still override it when chosen later).
+              localStorage.setItem("rechat-auto-chat", "oauth");
               void invoke("chat_status")
                 .then((st) => {
                   const c = st as { state: string; channel?: string; detail?: string };
@@ -1173,6 +1177,9 @@ $("kickConnectBtn").addEventListener("click", () => {
 $("kickDisconnectBtn").addEventListener("click", () => {
   if (!isTauri) return;
   clearInterval(kickPollTimer);
+  if (localStorage.getItem("rechat-auto-chat") === "oauth") {
+    localStorage.removeItem("rechat-auto-chat");
+  }
   void invoke("disconnect_kick_oauth")
     .then(() => void refreshKickUi())
     .catch(() => undefined);
@@ -1206,14 +1213,17 @@ if (isTauri) {
   if (savedGoal) {
     void invoke("connect_goal", { link: savedGoal }).catch(() => undefined);
   }
-  // Auto-connect: Kick OAuth first, else the remembered manual channel.
+  // Auto-connect (0.3.8): honour the remembered mode first. Before
+  // this, saved Kick tokens always won, so a user who had chosen
+  // MasterStream still got the direct-Kick attempt on every startup
+  // — unreachable from Iran — and MasterStream was never tried.
   void refreshKickUi().then((s) => {
-    if (s?.connected) {
+    if (localStorage.getItem("rechat-auto-chat") === "masterstream" && msLinkInput.value.trim()) {
+      void invoke("connect_masterstream", { link: msLinkInput.value.trim() }).catch(() => undefined);
+    } else if (s?.connected) {
       void invoke("auto_connect_kick").catch(() => undefined);
     } else if (localStorage.getItem("rechat-auto-chat") === "1" && channelInput.value.trim()) {
       void invoke("connect_chat", { channel: channelInput.value.trim() }).catch(() => undefined);
-    } else if (localStorage.getItem("rechat-auto-chat") === "masterstream" && msLinkInput.value.trim()) {
-      void invoke("connect_masterstream", { link: msLinkInput.value.trim() }).catch(() => undefined);
     }
   });
 }
