@@ -42,7 +42,7 @@ const TOKEN_URL: &str = "https://id.kick.com/oauth/token";
 const USERS_URL: &str = "https://api.kick.com/public/v1/users";
 const CHANNELS_URL: &str = "https://api.kick.com/public/v1/channels";
 const REDIRECT_URI: &str = "http://localhost:17874/oauth/callback";
-const USER_AGENT: &str = "ReChat/0.3.10";
+const USER_AGENT: &str = "ReChat/0.3.11";
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct KickClientConfig {

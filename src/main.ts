@@ -254,8 +254,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۰",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۰ (تل‌لایو هم به‌عنوان منبع چت اضافه شد + لینک mstream.ir هم برای مستراستریم قبول می‌شود؛ فیکس TLS وب‌سوکت از ۰٫۳٫۹ سر جایش هست). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۱",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۱ (خطای Goal علت دقیق را می‌گوید و salt لینک دیگر روی اورلی دیده نمی‌شود + دو تلاش سریع برای قطعی‌های لحظه‌ای). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -434,8 +434,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.10",
-    aboutTextNew: "Version 0.3.10 (TeleLivee added as a chat source + mstream.ir links accepted for MasterStream; the websocket TLS fix from 0.3.9 stays). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.11",
+    aboutTextNew: "Version 0.3.11 (Goal errors now name the exact cause and the link salt no longer shows on the overlay + two quick retries for transient blips). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -994,6 +994,17 @@ let lastGoalDetail = "";
 function humanGoalError(detail?: string): string {
   const t = dict[lang];
   const d = (detail ?? "").toLowerCase();
+  // 0.3.11: the backend's classified details are already human
+  // Persian (DNS / timeout / refused / TLS) — show them as-is
+  // instead of the generic network bucket.
+  if (
+    d.includes("(dns)") ||
+    d.includes("(تایم‌اوت)") ||
+    d.includes("رد شد") ||
+    d.includes("اتصال امن")
+  ) {
+    return detail ?? "";
+  }
   if (
     d.includes("invalid") ||
     d.includes("parse") ||

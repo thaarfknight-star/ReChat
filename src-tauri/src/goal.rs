@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 use tokio::sync::RwLock;
 
-const USER_AGENT: &str = "ReChat/0.3.10";
+const USER_AGENT: &str = "ReChat/0.3.11";
 const POLL_SECS: u64 = 10;
 
 /// Goal values ready for the overlay.
@@ -194,6 +194,48 @@ fn unit_label(unit: &str) -> String {
     }
 }
 
+/// Classify a failed Donofa request into a short Persian detail.
+/// 0.3.11: reqwest's Display embeds the full request URL — including
+/// the widget salt — and the overlay prints the detail raw, so the
+/// salt used to show on stream (see the 2026-11-07 screenshot) while
+/// the generic "error sending request" said nothing about the cause.
+/// The detail now names the cause and never contains the URL. Only
+/// the error's source chain is read for classification; no part of
+/// it is ever copied into the output.
+fn describe_send_error(e: &reqwest::Error) -> String {
+    let mut chain = String::new();
+    let mut cur: Option<&(dyn std::error::Error + 'static)> = Some(e);
+    while let Some(err) = cur {
+        if !chain.is_empty() {
+            chain.push(' ');
+        }
+        chain.push_str(&err.to_string());
+        cur = err.source();
+    }
+    let lower = chain.to_lowercase();
+    if e.is_timeout() || lower.contains("timed out") || lower.contains("deadline") {
+        "دونوفا دیر جواب داد (تایم‌اوت)".to_string()
+    } else if lower.contains("dns")
+        || lower.contains("lookup")
+        || lower.contains("name resolution")
+    {
+        "آدرس دونوفا پیدا نشد (DNS)؛ DNS یا VPN را چک کن".to_string()
+    } else if lower.contains("connection refused")
+        || lower.contains("connection reset")
+        || lower.contains("connection aborted")
+    {
+        "اتصال به دونوفا رد شد".to_string()
+    } else if lower.contains("tls")
+        || lower.contains("certificate")
+        || lower.contains("ssl")
+        || lower.contains("handshake")
+    {
+        "اتصال امن به دونوفا برقرار نشد".to_string()
+    } else {
+        "خطا در اتصال به دونوفا".to_string()
+    }
+}
+
 async fn fetch_goal(id: &str, salt: &str) -> Result<GoalState, String> {
     let client = reqwest::Client::builder()
         .user_agent(USER_AGENT)
@@ -207,7 +249,11 @@ async fn fetch_goal(id: &str, salt: &str) -> Result<GoalState, String> {
     let url = format!(
         "https://api.donofa.com/api/v2/widgets/{id}?salt={salt}&cache_bust={bust}"
     );
-    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let resp = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| describe_send_error(&e))?;
     if !resp.status().is_success() {
         return Err(format!("دونوفا جواب نداد ({})", resp.status()));
     }
@@ -234,6 +280,24 @@ async fn fetch_goal(id: &str, salt: &str) -> Result<GoalState, String> {
     })
 }
 
+/// One poll tick with two quick retries: a transient blip (a single
+/// failed request) heals without ever flipping the overlay to error.
+async fn fetch_with_retry(id: &str, salt: &str) -> Result<GoalState, String> {
+    let mut last_err = String::new();
+    for attempt in 0..3 {
+        match fetch_goal(id, salt).await {
+            Ok(goal) => return Ok(goal),
+            Err(e) => {
+                last_err = e;
+                if attempt < 2 {
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                }
+            }
+        }
+    }
+    Err(last_err)
+}
+
 async fn run_goal_loop(hub: Arc<GoalHub>, link: String, gen: u64) {
     let Some((id, salt)) = parse_goal_link(&link) else {
         return;
@@ -242,7 +306,7 @@ async fn run_goal_loop(hub: Arc<GoalHub>, link: String, gen: u64) {
         if hub.generation() != gen {
             return;
         }
-        match fetch_goal(&id, &salt).await {
+        match fetch_with_retry(&id, &salt).await {
             Ok(goal) => {
                 let mut s = GoalStatus::new("live", Some(link.clone()));
                 s.goal = Some(goal);
