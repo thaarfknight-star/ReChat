@@ -1,15 +1,24 @@
-//! Donofa live goal (M3).
+//! Donofa live goal (M3), realtime since 0.3.12.
 //!
-//! Polling, not websocket, by design. The widget endpoint is public,
-//! needs no auth, and returns the exact current/target:
+//! The widget endpoint gives the initial values (one API fetch):
 //!   GET https://api.donofa.com/api/v2/widgets/{identifier}?salt={salt}
 //!   -> widget.goal {title, unit, initial, progress, total, status, is_active}
 //! (pinned live 2026-11-04 against a real user link: goal "ارتقا استریم",
 //! unit IRT, total 30,000,000).
-//! A websocket (`.goal.updated` on ws.donofa.com) exists, but its channel
-//! /auth dance is undocumented for public widgets; polling every 10s is
-//! the stable path. A failed poll never freezes the bar silently: the
-//! overlay keeps the last values and shows the error state.
+//! Updates arrive live over Laravel Reverb (Pusher protocol 7):
+//!   wss://ws.donofa.com/app/AF5Ed2JK?protocol=7&client=js&version=8.4.0&flash=false
+//!   public channel `widget.{identifier}`, events `.goal.updated` /
+//!   `GoalUpdatedEvent` (goal object) and `.widget.updated` (refetch once).
+//! Pinned 2026-11-07 from Donofa's own public widget bundle on
+//! w.donofa.ir — config {wsHost: ws.donofa.com, wsKey: AF5Ed2JK,
+//! 443, forceTLS} + channel `widget.${id}` — and the subscription
+//! was verified live (subscription_succeeded) against the user's own
+//! widget id. The key is Donofa's public Reverb key, shipped in
+//! their public JS; the channel is public (Echo `.channel()`), so no
+//! auth is needed. Polling survives only as a fallback: while the
+//! socket is down, one fetch every 60s (was every 10s) keeps the bar
+//! fresh. A failed fetch never freezes the bar silently: the overlay
+//! keeps the last values and shows the error state.
 //!
 //! Current amount = initial + progress (initial is the goal's head
 //! start; 0 on the pinned example, so both readings agree there).
@@ -18,14 +27,27 @@ use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc,
 };
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
+use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tauri::Emitter;
 use tokio::sync::RwLock;
+use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
-const USER_AGENT: &str = "ReChat/0.3.11";
-const POLL_SECS: u64 = 10;
+use crate::masterstream;
+
+const USER_AGENT: &str = "ReChat/0.3.12";
+/// Fallback poll cadence while the realtime socket is down (was 10s
+/// when polling was the only path).
+const FALLBACK_POLL_SECS: u64 = 60;
+/// Reverb (Pusher protocol) endpoint; the key is Donofa's public one.
+const WS_URL: &str =
+    "wss://ws.donofa.com/app/AF5Ed2JK?protocol=7&client=js&version=8.4.0&flash=false";
+/// The server pings every 30s (activity_timeout); silence past this
+/// means the socket is dead.
+const WS_STALE_SECS: u64 = 45;
 
 /// Goal values ready for the overlay.
 #[derive(Clone, Debug, Serialize)]
@@ -262,13 +284,17 @@ async fn fetch_goal(id: &str, salt: &str) -> Result<GoalState, String> {
         .widget
         .and_then(|w| w.goal)
         .ok_or("در این لینک Goal فعالی نیست")?;
+    Ok(to_goal_state(g))
+}
+
+fn to_goal_state(g: RawGoal) -> GoalState {
     let current = g.initial + g.progress;
     let pct = if g.total > 0.0 {
         (current / g.total * 100.0).clamp(0.0, 100.0)
     } else {
         0.0
     };
-    Ok(GoalState {
+    GoalState {
         title: g.title,
         unit_label: unit_label(&g.unit),
         unit: g.unit,
@@ -277,7 +303,148 @@ async fn fetch_goal(id: &str, salt: &str) -> Result<GoalState, String> {
         pct,
         status: g.status,
         active: g.is_active,
-    })
+    }
+}
+
+/// Extract a goal from a Reverb event payload, the way Donofa's own
+/// widget does: `d.goal || d.data.goal || d.data || d`. The payload
+/// carries the same goal fields as the API. Returns None when the
+/// payload holds no goal at all (then the caller refetches once).
+fn goal_from_event(data: &Value) -> Option<GoalState> {
+    let cand = data
+        .get("goal")
+        .or_else(|| data.get("data").and_then(|d| d.get("goal")))
+        .or_else(|| data.get("data"))
+        .unwrap_or(data);
+    let g: RawGoal = serde_json::from_value(cand.clone()).ok()?;
+    if g.total <= 0.0 && g.title.is_empty() {
+        return None;
+    }
+    Some(to_goal_state(g))
+}
+
+/// Pusher frames carry `data` as a JSON string; parse it, falling
+/// back to the raw value when it already is one.
+fn pusher_data(frame: &Value) -> Option<Value> {
+    match frame.get("data") {
+        Some(Value::String(s)) => serde_json::from_str(s).ok(),
+        Some(v) => Some(v.clone()),
+        None => None,
+    }
+}
+
+async fn set_live(hub: &Arc<GoalHub>, link: &str, goal: GoalState) {
+    let mut s = GoalStatus::new("live", Some(link.to_string()));
+    s.goal = Some(goal);
+    hub.set(s).await;
+}
+
+async fn set_error(hub: &Arc<GoalHub>, link: &str, e: String) {
+    // Keep the last goal; only the state flips to error.
+    let mut snap = hub.snapshot().await;
+    snap.state = "error".to_string();
+    snap.detail = Some(e);
+    snap.link = Some(link.to_string());
+    hub.set(snap).await;
+}
+
+enum WsOutcome {
+    /// The loop's generation moved on (disconnect / new link).
+    Replaced,
+    /// The socket died; the caller falls back to polling, then retries.
+    Down,
+}
+
+/// One Reverb session: connect, subscribe to `widget.{id}`, and apply
+/// live goal events until the socket dies or the loop is replaced.
+async fn run_goal_ws_session(
+    hub: &Arc<GoalHub>,
+    link: &str,
+    id: &str,
+    salt: &str,
+    gen: u64,
+) -> WsOutcome {
+    let req = match masterstream::ws_request(WS_URL, USER_AGENT) {
+        Ok(r) => r,
+        Err(_) => return WsOutcome::Down,
+    };
+    let (mut ws, _) = match connect_async(req).await {
+        Ok(p) => p,
+        Err(_) => return WsOutcome::Down,
+    };
+    let channel = format!("widget.{id}");
+    let mut subscribed = false;
+    let mut last_frame = Instant::now();
+    loop {
+        if hub.generation() != gen {
+            return WsOutcome::Replaced;
+        }
+        // Short reads so a disconnect is noticed within seconds; the
+        // socket is only stale when nothing arrived for 45s (the
+        // server pings every 30s).
+        let next = tokio::time::timeout(Duration::from_secs(5), ws.next()).await;
+        let msg = match next {
+            Ok(Some(Ok(m))) => {
+                last_frame = Instant::now();
+                m
+            }
+            Ok(Some(Err(_))) | Ok(None) => return WsOutcome::Down,
+            Err(_) => {
+                if last_frame.elapsed() > Duration::from_secs(WS_STALE_SECS) {
+                    return WsOutcome::Down;
+                }
+                continue;
+            }
+        };
+        let WsMessage::Text(text) = msg else {
+            continue;
+        };
+        let Ok(frame) = serde_json::from_str::<Value>(&text) else {
+            continue;
+        };
+        let event = frame.get("event").and_then(|e| e.as_str()).unwrap_or("");
+        match event {
+            "pusher:connection_established" => {
+                let sub = serde_json::json!({
+                    "event": "pusher:subscribe",
+                    "data": { "channel": channel },
+                });
+                if ws.send(WsMessage::Text(sub.to_string().into())).await.is_err() {
+                    return WsOutcome::Down;
+                }
+            }
+            "pusher_internal:subscription_succeeded" => subscribed = true,
+            "pusher:ping" => {
+                let pong = serde_json::json!({ "event": "pusher:pong", "data": {} });
+                if ws.send(WsMessage::Text(pong.to_string().into())).await.is_err() {
+                    return WsOutcome::Down;
+                }
+            }
+            "pusher:error" => return WsOutcome::Down,
+            ".goal.updated" | "GoalUpdatedEvent" if subscribed => {
+                let Some(data) = pusher_data(&frame) else {
+                    continue;
+                };
+                match goal_from_event(&data) {
+                    Some(goal) => set_live(hub, link, goal).await,
+                    // Shape differs from the widget's? Refetch once —
+                    // one request per donation beats a stale bar.
+                    None => {
+                        if let Ok(goal) = fetch_with_retry(id, salt).await {
+                            set_live(hub, link, goal).await;
+                        }
+                    }
+                }
+            }
+            ".widget.updated" | "WidgetUpdated" | "WidgetUpdateEvent" if subscribed => {
+                // Mirror the widget: a widget update means refetch once.
+                if let Ok(goal) = fetch_with_retry(id, salt).await {
+                    set_live(hub, link, goal).await;
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 /// One poll tick with two quick retries: a transient blip (a single
@@ -302,25 +469,30 @@ async fn run_goal_loop(hub: Arc<GoalHub>, link: String, gen: u64) {
     let Some((id, salt)) = parse_goal_link(&link) else {
         return;
     };
+    // One initial fetch for the current values; after that the
+    // socket carries every update and Donofa gets no polling at all.
+    match fetch_with_retry(&id, &salt).await {
+        Ok(goal) => set_live(&hub, &link, goal).await,
+        Err(e) => set_error(&hub, &link, e).await,
+    }
     loop {
         if hub.generation() != gen {
             return;
         }
-        match fetch_with_retry(&id, &salt).await {
-            Ok(goal) => {
-                let mut s = GoalStatus::new("live", Some(link.clone()));
-                s.goal = Some(goal);
-                hub.set(s).await;
-            }
-            Err(e) => {
-                // Keep the last goal; only the state flips to error.
-                let mut snap = hub.snapshot().await;
-                snap.state = "error".to_string();
-                snap.detail = Some(e);
-                snap.link = Some(link.clone());
-                hub.set(snap).await;
+        match run_goal_ws_session(&hub, &link, &id, &salt, gen).await {
+            WsOutcome::Replaced => return,
+            WsOutcome::Down => {
+                // Socket down: one poll tick every 60s keeps the bar
+                // fresh, then the socket is retried.
+                tokio::time::sleep(Duration::from_secs(FALLBACK_POLL_SECS)).await;
+                if hub.generation() != gen {
+                    return;
+                }
+                match fetch_with_retry(&id, &salt).await {
+                    Ok(goal) => set_live(&hub, &link, goal).await,
+                    Err(e) => set_error(&hub, &link, e).await,
+                }
             }
         }
-        tokio::time::sleep(Duration::from_secs(POLL_SECS)).await;
     }
 }

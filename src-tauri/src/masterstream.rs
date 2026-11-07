@@ -53,7 +53,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 use crate::kick::{Badge, ChatEvent, ChatHub, ChatMessage, ChatStatus};
 
-const USER_AGENT: &str = "ReChat/0.3.11";
+const USER_AGENT: &str = "ReChat/0.3.12";
 const LABEL: &str = "MasterStream";
 
 /// Login values parsed out of a widget page.
@@ -204,7 +204,10 @@ async fn fetch_widget_config(link: &str) -> Result<WidgetConfig, String> {
 /// ("sec-websocket-key") and the app sat on "reconnecting" forever —
 /// the 0.3.9 live test used the URL form (which auto-generates the
 /// key) and never covered this path. The TeleLivee test caught it.
-fn ws_request(url: &str) -> Result<http::Request<()>, String> {
+///
+/// Shared since 0.3.12: the Donofa goal socket (goal.rs) builds its
+/// handshake with the same helper.
+pub(crate) fn ws_request(url: &str, user_agent: &str) -> Result<http::Request<()>, String> {
     let authority = url
         .strip_prefix("wss://")
         .or_else(|| url.strip_prefix("ws://"))
@@ -224,7 +227,7 @@ fn ws_request(url: &str) -> Result<http::Request<()>, String> {
             tokio_tungstenite::tungstenite::handshake::client::generate_key(),
         )
         .header("Origin", origin)
-        .header("User-Agent", USER_AGENT)
+        .header("User-Agent", user_agent)
         .body(())
         .map_err(|e| e.to_string())
 }
@@ -421,7 +424,7 @@ async fn run_masterstream_loop(hub: Arc<ChatHub>, link: String, gen: u64) {
         })
         .await;
         let url = socket_url(&cfg);
-        let req = match ws_request(&url) {
+        let req = match ws_request(&url, USER_AGENT) {
             Ok(r) => r,
             Err(e) => {
                 hub.set_status(ChatStatus {

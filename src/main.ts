@@ -254,8 +254,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۱",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۱ (خطای Goal علت دقیق را می‌گوید و salt لینک دیگر روی اورلی دیده نمی‌شود + دو تلاش سریع برای قطعی‌های لحظه‌ای). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۲",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۲ (Goal زنده شد: آپدیت‌ها با وب‌سوکت می‌آیند و دیگر هر ۱۰ ثانیه به دونوفا درخواست نمی‌رود). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -434,8 +434,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.11",
-    aboutTextNew: "Version 0.3.11 (Goal errors now name the exact cause and the link salt no longer shows on the overlay + two quick retries for transient blips). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.12",
+    aboutTextNew: "Version 0.3.12 (Goal is now realtime: updates arrive over a websocket instead of polling Donofa every 10 seconds). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
