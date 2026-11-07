@@ -249,8 +249,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۸",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۸ (ورود به Kick فقط یک‌بار: چت با نام کانال ذخیره‌شده وصل می‌شود و تازه‌سازی توکن دیگر جلویش را نمی‌گیرد + لینک ویجت مرده‌ی مستراستریم واضح گزارش می‌شود). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۹",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۹ (اتصال مستراستریم واقعاً وصل می‌شود: کلاینت وب‌سوکت تا حالا TLS نداشت و wss هیچ‌وقت نمی‌گرفت + ورود به Kick فقط یک‌بار + لینک ویجت مرده واضح گزارش می‌شود). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -424,8 +424,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.8",
-    aboutTextNew: "Version 0.3.8 (Kick login once: chat connects with the stored channel name and token refresh no longer blocks it + dead MasterStream widget links are reported plainly). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.9",
+    aboutTextNew: "Version 0.3.9 (MasterStream really connects: the websocket client had no TLS so wss could never work + Kick login once + dead widget links reported plainly). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 

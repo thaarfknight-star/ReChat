@@ -1,6 +1,6 @@
 [package]
 name = "rechat"
-version = "0.3.8"
+version = "0.3.9"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
@@ -14,9 +14,14 @@ tauri-plugin-opener = "2"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio-tungstenite = "0.26"
+# 0.3.9: tokio-tungstenite's DEFAULT features are connect+handshake
+# only — NO TLS. Every wss:// connect in the app (MasterStream AND
+# direct Kick Pusher) therefore failed at once with "reconnecting"
+# forever, while the reqwest (rustls) fetches worked fine. Enable
+# rustls with the Mozilla roots so wss:// actually works.
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3"
-# MasterStream WS handshake (0.3.8): build the request to send the
+# MasterStream WS handshake (0.3.9): build the request to send the
 # browser widget's Origin header.
 http = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
