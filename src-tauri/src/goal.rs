@@ -38,7 +38,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 use crate::masterstream;
 
-const USER_AGENT: &str = "ReChat/0.3.14";
+const USER_AGENT: &str = "ReChat/0.3.15";
 /// Fallback poll cadence while the realtime socket is down (was 10s
 /// when polling was the only path).
 const FALLBACK_POLL_SECS: u64 = 60;
@@ -259,6 +259,18 @@ fn describe_send_error(e: &reqwest::Error) -> String {
 }
 
 async fn fetch_goal(id: &str, salt: &str) -> Result<GoalState, String> {
+    // 0.3.15: the whole fetch runs under a hard 20s cap. reqwest's own
+    // 15s timeout does not cover a hung system DNS lookup on Windows,
+    // and an uncapped fetch left the overlay stuck on "loading" forever
+    // with no error and no retry. A capped fetch fails as a timeout
+    // instead, so the loop always moves on (socket, then fallback poll).
+    match tokio::time::timeout(Duration::from_secs(20), fetch_goal_inner(id, salt)).await {
+        Ok(r) => r,
+        Err(_) => Err("دونوفا دیر جواب داد (تایم‌اوت)".to_string()),
+    }
+}
+
+async fn fetch_goal_inner(id: &str, salt: &str) -> Result<GoalState, String> {
     let client = reqwest::Client::builder()
         .user_agent(USER_AGENT)
         .timeout(Duration::from_secs(15))

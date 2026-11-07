@@ -254,8 +254,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۴",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۴ (ستون چت سقف عرض گرفت: پیام‌ها دیگر به اندازهٔ کل لایه کش نمی‌آیند + تنظیم «عرض ستون چت» در شخصی‌سازی). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۵",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۵ (متن چت با عرض لایه بزرگ می‌شود تا روی لایه‌ی عریض ریز نماند + خواندن Goal سقف ۲۰ ثانیه‌ای گرفت تا روی «در حال خواندن» گیر نکند). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -434,8 +434,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.14",
-    aboutTextNew: "Version 0.3.14 (Chat column width cap: messages no longer stretch across the whole layer + a 'Chat column width' setting in customization). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.15",
+    aboutTextNew: "Version 0.3.15 (Chat text scales with the layer width so it never stays tiny on a wide layer + Goal reads are capped at 20 seconds so they can't stick on 'loading' forever). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -1347,7 +1347,10 @@ function defaultTheme(): Theme {
 // Mirrors theme.rs Theme::css (keep the two in sync).
 function buildThemeCss(t: Theme): string {
   const maxw = t.chat_max_width > 0 ? `${t.chat_max_width}px` : "none";
-  let css = `:root{--chat-font-size:${t.chat_font_size}px;--chat-bg-opacity:${t.chat_bg_opacity};--chat-text:${t.chat_text_color};--chat-radius:${t.chat_radius}px;--chat-gap:${t.chat_gap}px;--chat-line-height:${t.chat_line_height};--chat-msg-padding:${t.chat_msg_padding}px;--chat-max-width:${maxw};--goal-title-size:${t.goal_title_size}px;--goal-bar-h:${t.goal_bar_height}px;--goal-c1:${t.goal_bar_c1};--goal-c2:${t.goal_bar_c2};}`;
+  // 0.3.15: font scales with the layer width (5vw), bounded by the
+  // designed size below and 1.6x above — same formula as theme.rs.
+  const fontSize = `clamp(${t.chat_font_size}px, 5vw, ${Math.round(t.chat_font_size * 1.6)}px)`;
+  let css = `:root{--chat-font-size:${fontSize};--chat-bg-opacity:${t.chat_bg_opacity};--chat-text:${t.chat_text_color};--chat-radius:${t.chat_radius}px;--chat-gap:${t.chat_gap}px;--chat-line-height:${t.chat_line_height};--chat-msg-padding:${t.chat_msg_padding}px;--chat-max-width:${maxw};--goal-title-size:${t.goal_title_size}px;--goal-bar-h:${t.goal_bar_height}px;--goal-c1:${t.goal_bar_c1};--goal-c2:${t.goal_bar_c2};}`;
   if (!t.show_badges) css += ".msg .badge,.msg .badge-img{display:none!important}";
   if (!t.show_username_color) css += ".msg .user{color:var(--chat-text)!important}";
   if (!t.show_goal_values) css += "#goal .values{display:none!important}";

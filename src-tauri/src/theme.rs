@@ -174,9 +174,18 @@ impl Themes {
         } else {
             "none".to_string()
         };
-        let mut css = format!(
-            ":root{{--chat-font-size:{}px;--chat-bg-opacity:{};--chat-text:{};--chat-radius:{}px;--chat-gap:{}px;--chat-line-height:{};--chat-msg-padding:{}px;--chat-max-width:{};--goal-title-size:{}px;--goal-bar-h:{}px;--goal-c1:{};--goal-c2:{};}}",
+        // 0.3.15: the chat font scales with the layer width (5vw) so a
+        // wide Meld layer no longer renders tiny text, bounded below by
+        // the designed size and above by 1.6x. The min keeps narrow
+        // layers readable; the max keeps huge layers from blowing up.
+        let font_size = format!(
+            "clamp({}px, 5vw, {}px)",
             t.chat_font_size,
+            (t.chat_font_size as f32 * 1.6).round() as u32
+        );
+        let mut css = format!(
+            ":root{{--chat-font-size:{};--chat-bg-opacity:{};--chat-text:{};--chat-radius:{}px;--chat-gap:{}px;--chat-line-height:{};--chat-msg-padding:{}px;--chat-max-width:{};--goal-title-size:{}px;--goal-bar-h:{}px;--goal-c1:{};--goal-c2:{};}}",
+            font_size,
             t.chat_bg_opacity.clamp(0.0, 1.0),
             t.chat_text_color,
             t.chat_radius,
