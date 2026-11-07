@@ -19,7 +19,7 @@
 //! After the browser callback, the local server exchanges the code,
 //! resolves the channel slug, persists the tokens and connects chat
 //! through the normal Pusher path (kick.rs). Tokens live 2 hours.
-//! Auto-connect (0.3.9): chat needs only the stored slug — the Pusher
+//! Auto-connect (0.3.8): chat needs only the stored slug — the Pusher
 //! path uses the public channel resolver, no OAuth token — so the
 //! login sticks even when the token refresh cannot reach Kick (Kick
 //! is unreachable from Iran without VPN/DNS). An expired token is
@@ -42,7 +42,7 @@ const TOKEN_URL: &str = "https://id.kick.com/oauth/token";
 const USERS_URL: &str = "https://api.kick.com/public/v1/users";
 const CHANNELS_URL: &str = "https://api.kick.com/public/v1/channels";
 const REDIRECT_URI: &str = "http://localhost:17874/oauth/callback";
-const USER_AGENT: &str = "ReChat/0.3.9";
+const USER_AGENT: &str = "ReChat/0.3.10";
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct KickClientConfig {
@@ -361,7 +361,7 @@ impl KickAuthState {
     /// the Pusher path needs no OAuth token — so an expired access
     /// token is refreshed in the background (best-effort) and a
     /// refresh failure never blocks the login from sticking. Before
-    /// 0.3.9 the refresh ran first and its failure (Kick unreachable
+    /// 0.3.8 the refresh ran first and its failure (Kick unreachable
     /// from Iran without VPN/DNS) made every restart look like the
     /// login was lost, forcing a fresh browser login each time.
     pub async fn auto_connect(

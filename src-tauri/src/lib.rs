@@ -9,6 +9,7 @@ mod kick;
 mod kick_auth;
 mod masterstream;
 mod server;
+mod telelivee;
 mod theme;
 
 use std::{path::PathBuf, sync::Arc};
@@ -92,6 +93,25 @@ async fn connect_masterstream(
     }
     hub.disconnect().await;
     masterstream::spawn_masterstream_loop(hub.inner().clone(), link);
+    Ok(())
+}
+
+/// TeleLivee chat (0.3.10): the OBS overlay link is passed in, the
+/// backend fetches the overlay page for its channel id and opens the
+/// chat host's Socket.IO connection. `disconnect()` first bumps the
+/// generation so any older chat loop exits; the new loop captures the
+/// fresh generation. The link itself is kept only in the frontend's
+/// localStorage on the user's machine.
+#[tauri::command]
+async fn connect_telelivee(
+    hub: tauri::State<'_, Arc<ChatHub>>,
+    link: String,
+) -> Result<(), String> {
+    if link.trim().is_empty() {
+        return Err("لینک اورلی تل‌لایو خالی است".to_string());
+    }
+    hub.disconnect().await;
+    telelivee::spawn_telelivee_loop(hub.inner().clone(), link);
     Ok(())
 }
 
@@ -382,6 +402,7 @@ pub fn run() {
             connect_chat,
             disconnect_chat,
             connect_masterstream,
+            connect_telelivee,
             chat_status,
             save_filters,
             get_filters,

@@ -53,7 +53,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message as WsMessage};
 
 use crate::kick::{Badge, ChatEvent, ChatHub, ChatMessage, ChatStatus};
 
-const USER_AGENT: &str = "ReChat/0.3.9";
+const USER_AGENT: &str = "ReChat/0.3.10";
 const LABEL: &str = "MasterStream";
 
 /// Login values parsed out of a widget page.
@@ -144,7 +144,9 @@ fn extract_websites(html: &str) -> Vec<String> {
 /// Fetch the widget page and parse its login values.
 async fn fetch_widget_config(link: &str) -> Result<WidgetConfig, String> {
     let link = link.trim();
-    if !link.contains("masterstream.ir") {
+    // 0.3.10: mstream.ir is MasterStream's short domain — same widget,
+    // same key, only the host differs. Accept both hosts.
+    if !link.contains("masterstream.ir") && !link.contains("mstream.ir") {
         return Err("لینک باید لینک ویجت مستراستریم باشد".to_string());
     }
     let resp = http_client()?
@@ -189,11 +191,39 @@ async fn fetch_widget_config(link: &str) -> Result<WidgetConfig, String> {
 
 /// WebSocket handshake request matching the browser widget: the same
 /// Origin the widget page's own socket.io client sends. A bare
-/// tungstenite handshake sends no Origin at all.
+/// tungstenite handshake sends no Origin at all. The Origin is the
+/// socket's own origin, so it stays right whether the widget lives on
+/// masterstream.ir or mstream.ir.
+///
+/// 0.3.10: tungstenite's generate_request requires a caller-built
+/// Request to carry ALL five handshake headers itself — it extracts
+/// the Sec-WebSocket-Key from the request instead of generating one,
+/// and a missing header fails the handshake before any network I/O.
+/// The 0.3.8/0.3.9 request sent Origin + User-Agent only, so the
+/// MasterStream connect failed at once with InvalidHeader
+/// ("sec-websocket-key") and the app sat on "reconnecting" forever —
+/// the 0.3.9 live test used the URL form (which auto-generates the
+/// key) and never covered this path. The TeleLivee test caught it.
 fn ws_request(url: &str) -> Result<http::Request<()>, String> {
+    let authority = url
+        .strip_prefix("wss://")
+        .or_else(|| url.strip_prefix("ws://"))
+        .unwrap_or(url)
+        .split(['/', '?'])
+        .next()
+        .unwrap_or("");
+    let origin = format!("https://{authority}");
     http::Request::builder()
         .uri(url)
-        .header("Origin", "https://masterstream.ir")
+        .header("Host", authority)
+        .header("Connection", "Upgrade")
+        .header("Upgrade", "websocket")
+        .header("Sec-WebSocket-Version", "13")
+        .header(
+            "Sec-WebSocket-Key",
+            tokio_tungstenite::tungstenite::handshake::client::generate_key(),
+        )
+        .header("Origin", origin)
         .header("User-Agent", USER_AGENT)
         .body(())
         .map_err(|e| e.to_string())

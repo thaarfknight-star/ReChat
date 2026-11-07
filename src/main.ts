@@ -180,7 +180,7 @@ const dict: Record<Lang, Record<string, string>> = {
     error: "خطا در اتصال",
     // ---- M9 ----
     connTitle: "اتصال کیک",
-    connNote: "یک حالت را انتخاب کن؛ «نام کانال» ساده‌ترین حالت است، و اگر از ایران وصل می‌شوی و کیک مستقیم باز نمی‌شود، «مستراستریم» را بزن.",
+    connNote: "یک حالت را انتخاب کن؛ «نام کانال» ساده‌ترین حالت است، و اگر از ایران وصل می‌شوی و کیک مستقیم باز نمی‌شود، «مستراستریم» یا «تل‌لایو» را بزن.",
     modeChannel: "نام کانال (ساده)",
     modeOauth: "ورود با Kick (پیشنهادی)",
     modeMs: "مستراستریم (ایران)",
@@ -188,6 +188,11 @@ const dict: Record<Lang, Record<string, string>> = {
     msNote: "لینک ویجت را از داشبورد مستراستریم کپی کن؛ ReChat فقط با masterstream.ir حرف می‌زند و پیام‌ها با همان قالب و فیلترهای خود ReChat نشان داده می‌شوند. لینک فقط روی همین سیستم می‌ماند.",
     msEmpty: "لینک ویجت مستراستریم را بنویس.",
     msInvalid: "لینک باید لینک ویجت مستراستریم باشد.",
+    modeTl: "تل‌لایو (ایران)",
+    tlLinkLabel: "لینک اورلی چت تل‌لایو",
+    tlNote: "لینک اورلی چت را از داشبورد تل‌لایو کپی کن؛ پیام‌ها با همان قالب و فیلترهای خود ReChat نشان داده می‌شوند. لینک فقط روی همین سیستم می‌ماند.",
+    tlEmpty: "لینک اورلی تل‌لایو را بنویس.",
+    tlInvalid: "لینک باید لینک اورلی تل‌لایو باشد.",
     channelLabelNew: "نام کانال یا لینک کانال",
     channelHint: "پیام‌های زنده‌ی کانال در اورلی نمایش داده می‌شوند.",
     channelEmpty: "نام کانال را بنویس.",
@@ -249,8 +254,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "تمام شد!",
     reopenOnboard: "نمایش راهنمای شروع",
     usersHint: "برای افزودن، نام را بنویس و Enter بزن؛ برای حذف، روی × بزن. فیلترها همان لحظه روی پیام‌های تازه اعمال می‌شوند.",
-    versionNoteNew: "نسخه‌ی ۰٫۳٫۹",
-    aboutTextNew: "نسخه‌ی ۰٫۳٫۹ (اتصال مستراستریم واقعاً وصل می‌شود: کلاینت وب‌سوکت تا حالا TLS نداشت و wss هیچ‌وقت نمی‌گرفت + ورود به Kick فقط یک‌بار + لینک ویجت مرده واضح گزارش می‌شود). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
+    versionNoteNew: "نسخه‌ی ۰٫۳٫۱۰",
+    aboutTextNew: "نسخه‌ی ۰٫۳٫۱۰ (تل‌لایو هم به‌عنوان منبع چت اضافه شد + لینک mstream.ir هم برای مستراستریم قبول می‌شود؛ فیکس TLS وب‌سوکت از ۰٫۳٫۹ سر جایش هست). چت و Goal کیک را می‌گیرد و به‌صورت اورلی شفاف به Meld می‌دهد. تنظیمات فقط روی همین سیستم می‌ماند.",
   },
   en: {
     tagline: "Kick chat and Goal, for Meld Studio",
@@ -355,7 +360,7 @@ const dict: Record<Lang, Record<string, string>> = {
     error: "Connection error",
     // ---- M9 ----
     connTitle: "Kick connection",
-    connNote: "Pick a mode; “Channel name” is the simplest, and if you connect from Iran and Kick does not open directly, pick “MasterStream”.",
+    connNote: "Pick a mode; “Channel name” is the simplest, and if you connect from Iran and Kick does not open directly, pick “MasterStream” or “TeleLivee”.",
     modeChannel: "Channel name (simple)",
     modeOauth: "Sign in with Kick (recommended)",
     modeMs: "MasterStream (Iran)",
@@ -363,6 +368,11 @@ const dict: Record<Lang, Record<string, string>> = {
     msNote: "Copy the widget link from your MasterStream dashboard; ReChat talks only to masterstream.ir and messages arrive with ReChat's own theme and filters. The link stays on this machine only.",
     msEmpty: "Type the MasterStream widget link.",
     msInvalid: "That must be a MasterStream widget link.",
+    modeTl: "TeleLivee (Iran)",
+    tlLinkLabel: "TeleLivee chat overlay link",
+    tlNote: "Copy the chat overlay link from your TeleLivee dashboard; messages arrive with ReChat's own theme and filters. The link stays on this machine only.",
+    tlEmpty: "Type the TeleLivee overlay link.",
+    tlInvalid: "That must be a TeleLivee overlay link.",
     channelLabelNew: "Channel name or channel link",
     channelHint: "Live channel messages show up in the overlay.",
     channelEmpty: "Type a channel name.",
@@ -424,8 +434,8 @@ const dict: Record<Lang, Record<string, string>> = {
     wizFinish: "Done!",
     reopenOnboard: "Show getting-started guide",
     usersHint: "Type a name and press Enter to add; click × to remove. Filters apply instantly to new messages.",
-    versionNoteNew: "Version 0.3.9",
-    aboutTextNew: "Version 0.3.9 (MasterStream really connects: the websocket client had no TLS so wss could never work + Kick login once + dead widget links reported plainly). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
+    versionNoteNew: "Version 0.3.10",
+    aboutTextNew: "Version 0.3.10 (TeleLivee added as a chat source + mstream.ir links accepted for MasterStream; the websocket TLS fix from 0.3.9 stays). Takes Kick chat and Goal and hands them to Meld as transparent overlays. Settings stay on this machine.",
   },
 };
 
@@ -438,6 +448,7 @@ const isTauri =
 
 const channelInput = $<HTMLInputElement>("channelInput");
 const msLinkInput = $<HTMLInputElement>("msLinkInput");
+const tlLinkInput = $<HTMLInputElement>("tlLinkInput");
 const goalInput = $<HTMLInputElement>("goalInput");
 const langBtn = $<HTMLButtonElement>("langBtn");
 const chatStatus = $("chatStatus");
@@ -447,6 +458,7 @@ const hideCmdChk = $<HTMLInputElement>("hideCmdChk");
 let lang: Lang = (localStorage.getItem("rechat-lang") as Lang) || "fa";
 channelInput.value = localStorage.getItem("rechat-channel") ?? "";
 msLinkInput.value = localStorage.getItem("rechat-masterstream") ?? "";
+tlLinkInput.value = localStorage.getItem("rechat-telelivee") ?? "";
 goalInput.value = localStorage.getItem("rechat-goal") ?? "";
 
 type Filters = {
@@ -571,9 +583,10 @@ function statusText(state: string, channel?: string, detail?: string): string {
 function humanChatError(detail?: string): string {
   const t = dict[lang];
   const d = (detail ?? "").toLowerCase();
-  // MasterStream backend details are already human-readable Persian;
-  // show them as-is instead of the generic Kick fallback.
-  if (d.includes("ویجت") || d.includes("مستراستریم") || d.includes("masterstream")) return detail ?? "";
+  // MasterStream / TeleLivee backend details are already
+  // human-readable Persian; show them as-is instead of the generic
+  // Kick fallback.
+  if (d.includes("ویجت") || d.includes("مستراستریم") || d.includes("masterstream") || d.includes("تل‌لایو") || d.includes("telelivee") || d.includes("اورلی")) return detail ?? "";
   if (d.includes("not found") || d.includes("404") || d.includes("no channel")) return t.channelNotFound;
   if (d.includes("network") || d.includes("fetch") || d.includes("timed out") || d.includes("econnrefused") || d.includes("dns")) return t.channelNetwork;
   return t.channelGeneric;
@@ -634,6 +647,11 @@ function applyLang(): void {
   ($("msNote").textContent = t.msNote);
   ($("msConnectBtn").textContent = t.connect);
   ($("msDisconnectBtn").textContent = t.disconnect);
+  ($("modeTlBtn").textContent = t.modeTl);
+  ($("tlLinkLabel").textContent = t.tlLinkLabel);
+  ($("tlNote").textContent = t.tlNote);
+  ($("tlConnectBtn").textContent = t.connect);
+  ($("tlDisconnectBtn").textContent = t.disconnect);
   ($("kickAdvancedSummary").textContent = t.kickAdvancedSummary);
   ($("kickAdvancedNote").textContent = t.kickAdvancedNote);
   ($("kickClientIdLabel").textContent = t.kickClientIdLabel);
@@ -856,20 +874,24 @@ for (const head of document.querySelectorAll<HTMLButtonElement>(".acc-head")) {
 
 // ---------- M9 connection modes (channel = default, OAuth = tab) ----------
 // M9.5 adds a third tab: MasterStream widget link (for Iran, where
-// Kick itself is not directly reachable).
-type ConnMode = "channel" | "oauth" | "masterstream";
+// Kick itself is not directly reachable). 0.3.10 adds a fourth:
+// TeleLivee overlay link, same idea, different service.
+type ConnMode = "channel" | "oauth" | "masterstream" | "telelivee";
 function setConnMode(mode: ConnMode): void {
   localStorage.setItem("rechat-conn-mode", mode);
   ($("pane-channel").hidden = mode !== "channel");
   ($("pane-oauth").hidden = mode !== "oauth");
   ($("pane-masterstream").hidden = mode !== "masterstream");
+  ($("pane-telelivee").hidden = mode !== "telelivee");
   ($("modeChannelBtn").classList.toggle("active", mode === "channel"));
   ($("modeOauthBtn").classList.toggle("active", mode === "oauth"));
   ($("modeMsBtn").classList.toggle("active", mode === "masterstream"));
+  ($("modeTlBtn").classList.toggle("active", mode === "telelivee"));
 }
 $("modeChannelBtn").addEventListener("click", () => setConnMode("channel"));
 $("modeOauthBtn").addEventListener("click", () => setConnMode("oauth"));
 $("modeMsBtn").addEventListener("click", () => setConnMode("masterstream"));
+$("modeTlBtn").addEventListener("click", () => setConnMode("telelivee"));
 setConnMode((localStorage.getItem("rechat-conn-mode") as ConnMode) || "channel");
 
 // ---------- M9.5 MasterStream connect ----------
@@ -881,7 +903,8 @@ $("msConnectBtn").addEventListener("click", () => {
     ($("msError").textContent = dict[lang].msEmpty);
     return;
   }
-  if (!link.includes("masterstream.ir")) {
+  // 0.3.10: mstream.ir is MasterStream's short domain — same widget.
+  if (!link.includes("masterstream.ir") && !link.includes("mstream.ir")) {
     msLinkInput.classList.add("invalid");
     ($("msError").textContent = dict[lang].msInvalid);
     return;
@@ -900,6 +923,39 @@ $("msConnectBtn").addEventListener("click", () => {
   }
 });
 $("msDisconnectBtn").addEventListener("click", () => {
+  localStorage.removeItem("rechat-auto-chat");
+  if (isTauri) void invoke("disconnect_chat").catch(() => undefined);
+  renderStatus("idle");
+});
+
+// ---------- 0.3.10 TeleLivee connect ----------
+$("tlConnectBtn").addEventListener("click", () => {
+  const link = tlLinkInput.value.trim();
+  localStorage.setItem("rechat-telelivee", link);
+  if (!link) {
+    tlLinkInput.classList.add("invalid");
+    ($("tlError").textContent = dict[lang].tlEmpty);
+    return;
+  }
+  if (!link.includes("telelivee.ir")) {
+    tlLinkInput.classList.add("invalid");
+    ($("tlError").textContent = dict[lang].tlInvalid);
+    return;
+  }
+  tlLinkInput.classList.remove("invalid");
+  ($("tlError").textContent = "");
+  localStorage.setItem("rechat-auto-chat", "telelivee");
+  if (isTauri) {
+    void invoke("connect_telelivee", { link }).catch(() => {
+      renderStatus("error", "TeleLivee", "network error");
+    });
+    renderStatus("resolving", "TeleLivee");
+  } else {
+    renderStatus("idle");
+    showToast(dict[lang].saved);
+  }
+});
+$("tlDisconnectBtn").addEventListener("click", () => {
   localStorage.removeItem("rechat-auto-chat");
   if (isTauri) void invoke("disconnect_chat").catch(() => undefined);
   renderStatus("idle");
@@ -1220,6 +1276,8 @@ if (isTauri) {
   void refreshKickUi().then((s) => {
     if (localStorage.getItem("rechat-auto-chat") === "masterstream" && msLinkInput.value.trim()) {
       void invoke("connect_masterstream", { link: msLinkInput.value.trim() }).catch(() => undefined);
+    } else if (localStorage.getItem("rechat-auto-chat") === "telelivee" && tlLinkInput.value.trim()) {
+      void invoke("connect_telelivee", { link: tlLinkInput.value.trim() }).catch(() => undefined);
     } else if (s?.connected) {
       void invoke("auto_connect_kick").catch(() => undefined);
     } else if (localStorage.getItem("rechat-auto-chat") === "1" && channelInput.value.trim()) {

@@ -41,6 +41,7 @@
             <button type="button" data-mode="channel" class="active" id="modeChannelBtn">نام کانال (ساده)</button>
             <button type="button" data-mode="oauth" id="modeOauthBtn">ورود با Kick (پیشنهادی)</button>
             <button type="button" data-mode="masterstream" id="modeMsBtn">مستراستریم (ایران)</button>
+            <button type="button" data-mode="telelivee" id="modeTlBtn">تل‌لایو (ایران)</button>
           </div>
           <div id="pane-channel">
             <label id="channelLabel" for="channelInput">نام کانال یا لینک کانال</label>
@@ -61,6 +62,16 @@
               <button id="msDisconnectBtn" class="secondary">قطع اتصال</button>
             </div>
             <p id="msNote" class="hint">لینک ویجت را از داشبورد مستراستریم کپی کن؛ ReChat فقط با masterstream.ir حرف می‌زند و پیام‌ها با همان قالب و فیلترهای خود ReChat نشان داده می‌شوند. لینک فقط روی همین سیستم می‌ماند.</p>
+          </div>
+          <div id="pane-telelivee" hidden>
+            <label id="tlLinkLabel" for="tlLinkInput">لینک اورلی چت تل‌لایو</label>
+            <input id="tlLinkInput" type="text" class="ltr-input" placeholder="https://telelivee.ir/obs-overlay/?key=…" autocomplete="off" />
+            <div id="tlError" class="field-error" role="alert"></div>
+            <div class="row" style="margin-top:6px">
+              <button id="tlConnectBtn" class="primary">اتصال به تل‌لایو</button>
+              <button id="tlDisconnectBtn" class="secondary">قطع اتصال</button>
+            </div>
+            <p id="tlNote" class="hint">لینک اورلی چت را از داشبورد تل‌لایو کپی کن؛ پیام‌ها با همان قالب و فیلترهای خود ReChat نشان داده می‌شوند. لینک فقط روی همین سیستم می‌ماند.</p>
           </div>
           <div id="pane-oauth" hidden>
             <p id="kickOauthState" class="hint">وصل نیست.</p>
